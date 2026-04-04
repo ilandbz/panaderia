@@ -1,0 +1,474 @@
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
+import { useProductStore } from '@/stores/product.store';
+import { useVentaStore } from '@/stores/venta.store';
+import { useCajaStore } from '@/stores/caja.store';
+import { useClienteStore } from '@/stores/cliente.store';
+import Swal from 'sweetalert2';
+import { useModal } from '@/composables/useModal';
+import ClienteQuickModal from '@/components/pos/ClienteQuickModal.vue';
+import VentaResultadoModal from '@/components/pos/VentaResultadoModal.vue';
+
+const productStore = useProductStore();
+const ventaStore = useVentaStore();
+const cajaStore = useCajaStore();
+const clienteStore = useClienteStore();
+const loadingPdf = ref(false);
+const search = ref('');
+const selectedCategory = ref(0);
+const cart = ref([]);
+const tipoComprobante = ref('ticket');
+const conIgv = ref(false);
+const lastVenta = ref(null);
+const montoRecibido = ref(0);
+
+const { show: showPay, hide: hidePay } = useModal('payModal');
+const { show: showResult, hide: hideResult } = useModal('ventaResultadoModal');
+const { show: showClienteModal, hide: hideClienteModal } = useModal('clienteQuickModal');
+
+const selectedCliente = ref(null);
+const searchCliente = ref('');
+const clientesEncontrados = ref([]);
+const mostrarResultadosCliente = ref(false);
+
+const total = computed(() => {
+  return cart.value.reduce((acc, item) => acc + (item.cantidad * item.precio_venta), 0);
+});
+
+const subtotalDetalle = computed(() => {
+  return conIgv.value ? total.value / 1.18 : total.value;
+});
+
+const igvDetalle = computed(() => {
+  return conIgv.value ? total.value - subtotalDetalle.value : 0;
+});
+
+const handleKeydown = (event) => {
+  if (event.key === 'F8') {
+    event.preventDefault();
+    processPayment();
+  }
+  if (event.key === 'Enter' && lastVenta.value) {
+    nuevaVenta();
+  }
+};
+
+onMounted(async () => {
+  await productStore.fetchProducts();
+  await productStore.fetchCategories();
+  await cajaStore.fetchEstadoCaja();
+  await inicializarClienteDefecto();
+  window.addEventListener('keydown', handleKeydown);
+});
+
+const inicializarClienteDefecto = async () => {
+  const result = await clienteStore.fetchClientes('00000000');
+  if (result.length > 0) {
+    selectedCliente.value = result[0];
+  }
+};
+
+const buscarClientes = async () => {
+  if (searchCliente.value.length < 3) {
+    clientesEncontrados.value = [];
+    return;
+  }
+  clientesEncontrados.value = await clienteStore.fetchClientes(searchCliente.value);
+  mostrarResultadosCliente.value = true;
+};
+
+const seleccionarCliente = (cliente) => {
+  selectedCliente.value = cliente;
+  searchCliente.value = '';
+  clientesEncontrados.value = [];
+  mostrarResultadosCliente.value = false;
+};
+
+const quitCliente = () => {
+  selectedCliente.value = null;
+  inicializarClienteDefecto();
+};
+
+const onClienteSaved = async (cliente) => {
+  hideClienteModal();
+  if (lastVenta.value) {
+    // Si estamos en el modal de resultado, vinculamos el cliente a la venta
+    try {
+        Swal.showLoading();
+        await ventaStore.actualizarVenta(lastVenta.value.id, { cliente_id: cliente.id });
+        lastVenta.value.cliente = cliente;
+        lastVenta.value.cliente_id = cliente.id;
+        Swal.fire('Éxito', 'Cliente asignado a la venta', 'success');
+    } catch (error) {
+        Swal.fire('Error', 'No se pudo asignar el cliente a la venta', 'error');
+    }
+  } else {
+    // Si estamos en medio de una venta normal
+    seleccionarCliente(cliente);
+  }
+};
+
+const onNuevoCliente = () => {
+    showClienteModal();
+};
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown);
+});
+
+const categories = computed(() => [
+  { id: 0, nombre: 'Todas' },
+  ...productStore.categories
+]);
+
+const filteredProducts = computed(() => {
+  return productStore.products.filter(p => {
+    const matchesSearch = p.nombre.toLowerCase().includes(search.value.toLowerCase()) || 
+                          (p.codigo && p.codigo.toLowerCase().includes(search.value.toLowerCase()));
+    const matchesCat = selectedCategory.value === 0 || p.categoria_id === selectedCategory.value;
+    return matchesSearch && matchesCat;
+  });
+});
+
+const addToCart = (product) => {
+  if (!cajaStore.isCajaAbierta) {
+    Swal.fire('Atención', 'Debe abrir caja para realizar ventas', 'warning');
+    return;
+  }
+  if (product.stock <= 0) {
+    Swal.fire('Sin Stock', 'No hay unidades de ' + product.nombre, 'error');
+    return;
+  }
+  const existing = cart.value.find(item => item.id === product.id);
+  if (existing) {
+    existing.cantidad++;
+  } else {
+    cart.value.push({ ...product, cantidad: 1 });
+  }
+};
+
+const removeFromCart = (id) => {
+  cart.value = cart.value.filter(item => item.id !== id);
+};
+
+const processPayment = () => {
+  if (cart.value.length === 0) return;
+
+  // Validaciones SUNAT previas
+  if (tipoComprobante.value === 'factura') {
+    if (!selectedCliente.value || selectedCliente.value.tipo_documento !== 'RUC') {
+      Swal.fire('Atención', 'La Factura requiere un cliente con RUC', 'warning');
+      return;
+    }
+  }
+
+  if (tipoComprobante.value === 'boleta' && total.value > 700) {
+    if (!selectedCliente.value || selectedCliente.value.numero_documento === '00000000') {
+      Swal.fire('Atención', 'Boletas mayores a S/ 700 requieren identificación del cliente', 'warning');
+      return;
+    }
+  }
+
+  montoRecibido.value = total.value;
+  showPay();
+  nextTick(() => {
+    const input = document.getElementById('montoRecibidoInput');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  });
+};
+
+const confirmarVenta = async () => {
+  if (montoRecibido.value < total.value) {
+    Swal.fire('Error', 'Monto recibido insuficiente', 'error');
+    return;
+  }
+  try {
+    Swal.showLoading();
+    const ventaData = {
+      cliente_id: selectedCliente.value?.id,
+      subtotal: subtotalDetalle.value,
+      igv: igvDetalle.value,
+      total: total.value,
+      monto_pagado: parseFloat(montoRecibido.value),
+      vuelto: (montoRecibido.value - total.value),
+      forma_pago: 'efectivo',
+      tipo_comprobante: tipoComprobante.value,
+      items: cart.value.map(item => ({
+        producto_id: item.id,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_venta,
+        subtotal: item.cantidad * item.precio_venta
+      }))
+    };
+    hidePay();
+    const result = await ventaStore.registrarVenta(ventaData);
+    Swal.close();
+    lastVenta.value = result.data || result;
+    cart.value = [];
+    conIgv.value = false;
+
+    await productStore.fetchProducts();
+    await nextTick();
+    showResult();
+  } catch (error) {
+    Swal.close(); 
+    Swal.fire('Error', error.message || 'Error al guardar la venta', 'error');
+  }
+};
+
+const nuevaVenta = () => {
+  hideResult();
+  lastVenta.value = null;
+  search.value = '';
+};
+</script>
+
+<template>
+  <div class="pos-view h-100 d-flex flex-column bg-light">
+    <!-- Main POS UI (Screen Only) -->
+    <div class="row g-3 flex-grow-1 overflow-hidden no-print p-3">
+      <!-- Products Column -->
+      <div class="col-lg-8 h-100 d-flex flex-column">
+        <div class="card border-0 rounded-4 shadow-sm mb-3 overflow-hidden">
+          <div class="card-body p-3 bg-white">
+            <div class="input-group mb-3 bg-light rounded-pill px-3 py-1">
+              <span class="input-group-text bg-transparent border-0"><i class="fas fa-search text-muted"></i></span>
+              <input v-model="search" type="text" class="form-control border-0 bg-transparent" placeholder="Buscar por nombre o código...">
+            </div>
+            
+            <div class="categories-tabs d-flex gap-2 overflow-auto pb-2 scroll-hide">
+              <button v-for="cat in categories" :key="cat.id" 
+                      @click="selectedCategory = cat.id"
+                      class="btn btn-sm rounded-pill px-4 text-nowrap transition-all"
+                      :class="selectedCategory === cat.id ? 'btn-primary shadow' : 'btn-outline-secondary border-0 bg-light'">
+                {{ cat.nombre }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="products-grid flex-grow-1 overflow-auto pe-2 custom-scrollbar">
+           <div class="row g-3">
+             <div v-for="product in filteredProducts" :key="product.id" class="col-md-3">
+               <div class="card product-card border-0 rounded-4 shadow-sm h-100 position-relative transition-all" @click="addToCart(product)">
+                 <div class="card-img-top p-4 text-center bg-light-subtle rounded-top-4">
+                    <i class="fas fa-bread-slice fa-3x text-primary opacity-25"></i>
+                    <span v-if="product.stock <= 0" class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm">SIN STOCK</span>
+                 </div>
+                 <div class="card-body p-3 text-center">
+                   <div class="small fw-bold text-truncate text-dark mb-1">{{ product.nombre }}</div>
+                   <div class="text-primary fw-bold fs-5">S/ {{ product.precio_venta }}</div>
+                   <div class="extrasmall text-muted mt-1">Stock: <span :class="product.stock < 10 ? 'text-danger fw-bold' : ''">{{ product.stock }}</span></div>
+                 </div>
+               </div>
+             </div>
+           </div>
+        </div>
+      </div>
+
+      <!-- Cart Column -->
+      <div class="col-lg-4 h-100 d-flex flex-column">
+        <div class="card border-0 rounded-4 shadow-sm flex-grow-1 d-flex flex-column overflow-hidden">
+          <div class="card-header bg-white border-0 py-4 px-4 d-flex justify-content-between align-items-center">
+             <h5 class="fw-bold m-0 text-dark"><i class="fas fa-shopping-basket me-2 text-primary"></i> Carrito</h5>
+             <button class="btn btn-sm btn-light rounded-pill px-3 text-danger border-0" @click="cart = []">Vaciar</button>
+          </div>
+          
+          <div class="cart-items flex-grow-1 overflow-auto p-4 custom-scrollbar">
+            <div v-if="cart.length === 0" class="text-center text-muted py-5 mt-5">
+              <div class="display-3 mb-3 opacity-25"><i class="fas fa-shopping-cart"></i></div>
+              <p class="fw-bold">El carrito está vacío</p>
+              <p class="small">Selecciona productos para comenzar</p>
+            </div>
+            <div v-for="item in cart" :key="item.id" class="cart-item mb-4 d-flex align-items-center justify-content-between animate__animated animate__fadeIn">
+              <div class="flex-grow-1">
+                <div class="small fw-bold text-dark text-truncate mb-1" style="max-width: 180px;">{{ item.nombre }}</div>
+                <div class="extrasmall text-muted">
+                  <span class="badge bg-light text-dark px-2 border">{{ item.cantidad }}</span> x S/ {{ item.precio_venta }}
+                </div>
+              </div>
+              <div class="d-flex align-items-center text-end ms-2">
+                <div class="fw-bold text-dark fs-6 me-3">S/ {{ (item.cantidad * item.precio_venta).toFixed(2) }}</div>
+                <button class="btn btn-sm btn-outline-danger border-0 rounded-circle p-2" @click="removeFromCart(item.id)">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="cart-footer p-4 bg-light-subtle border-top">
+            <!-- Client Selection -->
+            <div class="client-selection mb-4 p-3 bg-white rounded-4 shadow-sm border border-dashed">
+               <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="small fw-bold text-dark"><i class="fas fa-user me-1 text-primary"></i> Cliente</span>
+                  <button class="btn btn-xs btn-link p-0 text-primary small text-decoration-none fw-bold" @click="showClienteModal">+ Nuevo</button>
+               </div>
+               
+               <div v-if="selectedCliente" class="selected-client bg-light p-2 rounded-3 d-flex align-items-center justify-content-between animate__animated animate__fadeIn">
+                  <div class="small text-truncate" style="max-width: 140px;">
+                    <strong class="text-dark">{{ selectedCliente.nombre_completo || selectedCliente.razon_social }}</strong>
+                    <div class="extrasmall text-muted">{{ selectedCliente.tipo_documento }}: {{ selectedCliente.numero_documento }}</div>
+                  </div>
+                  <button class="btn btn-sm btn-link text-danger p-0" @click="quitCliente"><i class="fas fa-times"></i></button>
+               </div>
+
+               <div v-else class="position-relative">
+                  <input type="text" v-model="searchCliente" @input="buscarClientes" class="form-control form-control-sm rounded-pill bg-light border-0 px-3" placeholder="Buscar cliente (DNI/RUC/Nombre)...">
+                  <div v-if="clientesEncontrados.length > 0 && mostrarResultadosCliente" class="client-results position-absolute w-100 bg-white shadow-lg rounded-3 mt-2 overflow-hidden" style="z-index: 1050; max-height: 200px; overflow-y: auto;">
+                    <div v-for="c in clientesEncontrados" :key="c.id" class="p-2 border-bottom cursor-pointer hover-bg-light" @click="seleccionarCliente(c)">
+                      <div class="small fw-bold">{{ c.nombre_completo || c.razon_social }}</div>
+                      <div class="extrasmall text-muted">{{ c.tipo_documento }}: {{ c.numero_documento }}</div>
+                    </div>
+                  </div>
+               </div>
+            </div>
+
+            <div class="sale-options mb-4 p-3 bg-white rounded-4 shadow-sm border border-dashed">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <span class="small fw-bold text-dark"><i class="fas fa-file-invoice me-1 text-primary"></i> Comprobante</span>
+                <select v-model="tipoComprobante" class="form-select form-select-sm border-0 bg-light rounded-pill w-50">
+                  <option value="ticket">Ticket</option>
+                  <option value="boleta">Boleta</option>
+                  <option value="factura">Factura</option>
+                </select>
+              </div>
+
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <span class="small fw-bold text-dark"><i class="fas fa-percentage me-1 text-primary"></i> Impuestos</span>
+                  <p class="extrasmall text-muted mb-0">Aplicar IGV (18%)</p>
+                </div>
+                <div class="form-check form-switch m-0">
+                  <input class="form-check-input custom-switch" type="checkbox" v-model="conIgv" role="switch">
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-details mb-3">
+              <div class="d-flex justify-content-between mb-2 small text-muted">
+                <span>Subtotal Neto</span>
+                <span>S/ {{ subtotalDetalle.toFixed(2) }}</span>
+              </div>
+              <div v-if="conIgv" class="d-flex justify-content-between mb-2 small text-muted animate__animated animate__fadeIn">
+                <span>IGV Desglosado</span>
+                <span>S/ {{ igvDetalle.toFixed(2) }}</span>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-end mb-4 pt-2 border-top border-2">
+               <span class="h6 text-uppercase tracking-widest text-muted fw-bold">Total Final</span>
+               <span class="h1 fw-bold text-primary m-0">S/ {{ total.toFixed(2) }}</span>
+            </div>
+            
+            <button class="btn btn-primary w-100 py-3 rounded-4 fw-bold shadow-lg border-0 btn-lg text-uppercase tracking-widest" 
+                    :disabled="cart.length === 0" @click="processPayment">
+                PROCESAR PAGO (F8)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para Cobrar (PayModal) -->
+    <div class="modal fade no-print" id="payModal" tabindex="-1" data-bs-backdrop="static">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-5 overflow-hidden">
+          <div class="modal-header border-0 bg-primary text-white p-5 text-center d-block position-relative">
+            <h4 class="modal-title fw-bold text-uppercase tracking-widest"><i class="fas fa-cash-register me-2"></i> Cobro</h4>
+            <p class="opacity-75 mb-0 small">Panadería & Pastelería Jara</p>
+            <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-4" @click="hidePay"></button>
+          </div>
+          <div class="modal-body p-5">
+            <div class="text-center mb-5 bg-primary-subtle p-4 rounded-5 border border-primary-subtle">
+              <h1 class="display-3 fw-bold text-primary mb-0">S/ {{ total.toFixed(2) }}</h1>
+              <p class="text-primary text-uppercase small fw-bold tracking-widest mb-0 opacity-75">Importe Total</p>
+            </div>
+            <div class="mb-5 position-relative">
+              <label class="form-label fw-bold small text-muted text-uppercase tracking-widest mb-3">Cantidad Recibida</label>
+              <div class="input-group input-group-lg shadow-sm border rounded-4 overflow-hidden focus-ring">
+                <span class="input-group-text bg-white border-0 fs-2 text-muted fw-light">S/</span>
+                <input type="number" id="montoRecibidoInput" v-model="montoRecibido" 
+                       class="form-control border-0 fs-1 fw-bold text-dark text-center" 
+                       @keyup.enter="confirmarVenta" step="0.10" autofocus>
+              </div>
+            </div>
+            <div class="p-4 rounded-5 border-2 text-center" 
+                 :class="montoRecibido < total ? 'bg-danger-subtle border-danger-subtle text-danger' : 'bg-success-subtle border-success-subtle text-success'">
+              <div class="small fw-bold text-uppercase tracking-widest mb-2">
+                {{ montoRecibido < total ? 'Faltante a pagar' : 'Cambio para entregar' }}
+              </div>
+              <div class="display-4 fw-bold mb-0">
+                S/ {{ Math.abs(montoRecibido - total).toFixed(2) }}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0 p-5 pt-0">
+            <button class="btn btn-primary w-100 py-4 rounded-4 fw-bold shadow-lg text-uppercase tracking-widest btn-lg" 
+                    :disabled="montoRecibido < total" @click="confirmarVenta">
+              <i class="fas fa-check-circle me-2"></i> FINALIZAR VENTA
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <VentaResultadoModal 
+      :venta="lastVenta || {}" 
+      :is-success="true" 
+      @close="nuevaVenta" 
+      @nuevo-cliente="onNuevoCliente"
+    />
+
+    <ClienteQuickModal @saved="onClienteSaved" />
+  </div>
+</template>
+
+
+
+<style scoped>
+.pos-view { background-color: #f8f9fa; }
+.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 10px; }
+.scroll-hide::-webkit-scrollbar { display: none; }
+
+.product-card {
+  cursor: pointer;
+  border: 1px solid rgba(0,0,0,0.05) !important;
+}
+.product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.08) !important;
+}
+
+.custom-switch { width: 3.5em; height: 1.7em; cursor: pointer; }
+.extrasmall { font-size: 0.7rem; }
+.tracking-widest { letter-spacing: 0.1em; }
+.transform-hover:hover { transform: scale(1.02); }
+
+
+
+@media screen {
+  .printable-ticket { display: none; }
+}
+
+/* Animations Helper */
+.transition-all { transition: all 0.3s ease-in-out; }
+.focus-ring:focus-within { 
+  border-color: var(--bs-primary) !important; 
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), .25) !important; 
+}
+
+.qr-mock {
+  width: 60px;
+  height: 60px;
+  border: 4px solid #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 10px;
+}
+</style>

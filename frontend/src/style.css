@@ -1,0 +1,35 @@
+:root {
+  --primary-color: #d97706; /* Mostaza Cálido */
+  --secondary-color: #7c2d12; /* Marrón Intenso */
+  --accent-color: #f59e0b; /* Naranja Suave */
+  --bg-color: #fffbeb; /* Crema muy suave */
+  --sidebar-bg: #451a03; /* Marrón casi negro */
+  --sidebar-text: #fef3c7;
+  --card-border: #fde68a;
+}
+
+body {
+  background-color: var(--bg-color);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #451a03;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #b45309;
+  border-color: #b45309;
+}
+
+.card {
+  border-color: var(--card-border);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.bg-panaderia {
+  background-color: var(--primary-color) !important;
+  color: white;
+}
