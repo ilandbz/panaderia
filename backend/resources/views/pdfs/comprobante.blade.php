@@ -43,8 +43,8 @@
         .x-small { font-size: 8px; }
 
         .logo {
-            width: 62px;
-            max-height: 62px;
+            width: 82px;
+            max-height: 82px;
             object-fit: contain;
             margin: 0 auto 4px auto;
             display: block;
@@ -208,17 +208,6 @@
             text-align: center;
         }
 
-        .qr-box {
-            width: 68px;
-            height: 68px;
-            border: 1px solid #000;
-            margin: 8px auto 4px auto;
-            text-align: center;
-            line-height: 68px;
-            font-size: 9px;
-            font-weight: bold;
-        }
-
         .nowrap {
             white-space: nowrap;
         }
@@ -268,21 +257,21 @@
 
     {{-- CABECERA --}}
     <div class="text-center">
-        @if(file_exists(public_path('img/logo_ticket.png')))
+        <div class="brand-name uppercase">{{ config('empresa.nombre') }}</div>
+        <div class="brand-subtitle">{{ config('empresa.slogan') }}</div>
+
+        @if(file_exists(public_path('img/logo.png')))
             <img
-                src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('img/logo_ticket.png'))) }}"
+                src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('img/logo.png'))) }}"
                 class="logo"
                 alt="Logo"
             >
         @endif
 
-        <div class="brand-name uppercase">Panadería Jara</div>
-        <div class="brand-subtitle">Panadería y Pastelería</div>
-
         <div class="header-info small" style="margin-top:4px;">
-            <div><span class="fw-bold">RUC:</span> 20123456789</div>
-            <div>Calle Principal 123 - Ayacucho</div>
-            <div>WhatsApp: 987 654 321</div>
+            <div><span class="fw-bold">RUC:</span> {{ config('empresa.ruc') }}</div>
+            <div>{{ config('empresa.direccion') }}</div>
+            <div>WhatsApp: {{ config('empresa.celular') }}</div>
         </div>
 
         <div class="doc-box">
@@ -393,10 +382,19 @@
         </div>
     @endif
 
-    {{-- QR opcional --}}
-    {{--
-    <div class="qr-box">QR</div>
-    --}}
+    {{-- QR SUNAT --}}
+    @if(isset($qrCodeBase64) && $qrCodeBase64)
+        <div class="text-center" style="margin-top: 10px;">
+            <img src="data:image/svg+xml;base64,{{ $qrCodeBase64 }}" alt="QR" style="width: 80px; height: 80px;">
+            <div class="x-small fw-bold" style="margin-top: 2px;">{{ $comprobante->codigo_hash ?? '' }}</div>
+        </div>
+    @elseif($comprobante && $comprobante->codigo_qr)
+        {{-- Fallback si no viene del controller --}}
+        <div class="text-center" style="margin-top: 10px;">
+            <img src="data:image/svg+xml;base64,{{ base64_encode((string) SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(80)->margin(0)->generate($comprobante->codigo_qr)) }}" alt="QR" style="width: 80px; height: 80px;">
+            <div class="x-small fw-bold" style="margin-top: 2px;">{{ $comprobante->codigo_hash }}</div>
+        </div>
+    @endif
 
     {{-- FOOTER --}}
     <div class="footer text-center">

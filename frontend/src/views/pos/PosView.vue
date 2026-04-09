@@ -255,7 +255,7 @@ const nuevaVenta = () => {
              <div v-for="product in filteredProducts" :key="product.id" class="col-md-3">
                <div class="card product-card border-0 rounded-4 shadow-sm h-100 position-relative transition-all" @click="addToCart(product)">
                  <div class="card-img-top p-4 text-center bg-light-subtle rounded-top-4">
-                    <i class="fas fa-bread-slice fa-3x text-primary opacity-25"></i>
+                    <i class="fas fa-3x text-primary opacity-25" :class="product.categoria.icono"></i>
                     <span v-if="product.stock <= 0" class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm">SIN STOCK</span>
                  </div>
                  <div class="card-body p-3 text-center">

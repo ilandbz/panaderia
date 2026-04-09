@@ -70,6 +70,15 @@ export const useVentaStore = defineStore('venta', {
                 this.loading = false;
             }
         },
+        async reenviarComprobante(id) {
+            this.loading = true;
+            try {
+                const response = await api.post(`/ventas/${id}/reenviar-comprobante`);
+                return response.data;
+            } finally {
+                this.loading = false;
+            }
+        },
         async getPdf(id, format) {
             try {
                 const data = await api.get(`/ventas/${id}/pdf`, {

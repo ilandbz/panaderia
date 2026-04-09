@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('ventas', VentaController::class)->only(['index', 'store', 'show', 'update']);
     Route::post('/ventas/{venta}/anular', [VentaController::class, 'anular']);
     Route::post('/ventas/{venta}/generar-comprobante', [VentaController::class, 'generarComprobante']);
+    Route::post('/ventas/{venta}/reenviar-comprobante', [VentaController::class, 'reenviarComprobante']);
     Route::get('/ventas/{venta}/pdf', [VentaController::class, 'downloadPdf']);
 
     // Caja
@@ -53,6 +54,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/abrir', [CajaController::class, 'abrir']);
         Route::post('/cerrar', [CajaController::class, 'cerrar']);
         Route::post('/gasto', [CajaController::class, 'registrarGasto']);
+        Route::post('/ingreso', [CajaController::class, 'registrarIngreso']);
+        Route::get('/historial', [CajaController::class, 'historial']);
+        Route::get('/{id}', [CajaController::class, 'show']);
     });
 
     // Categorias
@@ -60,8 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/categorias', [CategoriaController::class, 'store']);
 
     // Clientes
-    Route::get('/clientes', [ClienteController::class, 'index']);
-    Route::post('/clientes', [ClienteController::class, 'store']);
+    Route::apiResource('clientes', ClienteController::class);
 
     // Configuración: Usuarios & Roles
     Route::apiResource('users', UserController::class)->except(['show']);

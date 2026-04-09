@@ -35,7 +35,7 @@
         .text-uppercase { text-transform: uppercase; }
 
         .logo {
-            width: {{ $format === '58mm' ? '38%' : '55%' }};
+            width: {{ $format === '58mm' ? '28%' : '40%' }};
             display: block;
             margin: 0 auto 4px auto;
         }
@@ -175,16 +175,14 @@
             margin-top: 8px;
         }
 
-        .qr-mock {
-            width: {{ $format === '58mm' ? '42px' : '60px' }};
-            height: {{ $format === '58mm' ? '42px' : '60px' }};
-            border: 2px solid #000;
-            display: inline-block;
-            line-height: {{ $format === '58mm' ? '38px' : '56px' }};
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 4px;
-            font-size: {{ $format === '58mm' ? '8px' : '10px' }};
+        .qr-container {
+            display: block;
+            margin: 5px auto;
+        }
+
+        .qr-container img {
+            width: {{ $format === '58mm' ? '60px' : '85px' }};
+            height: auto;
         }
 
         .thanks {
@@ -203,17 +201,17 @@
     <div class="ticket">
 
         <div class="text-center">
-            @if(file_exists(public_path('img/logo_ticket.png')))
-                <img src="{{ public_path('img/logo_ticket.png') }}" class="logo">
+            <div class="brand-name">{{ config('empresa.nombre') }}</div>
+            <div class="subtitle">{{ config('empresa.slogan') }}</div>
+
+            @if(file_exists(public_path('img/logo.png')))
+                <img src="{{ public_path('img/logo.png') }}" class="logo">
             @endif
 
-            <div class="brand-name">PANADERÍA JARA</div>
-            <div class="subtitle">Calidad Hecha Pan</div>
-
             <div class="info-business">
-                RUC: 20123456789<br>
-                Calle Principal 123 - Ayacucho<br>
-                Wsp: 987 654 321
+                <div><span class="fw-bold">RUC:</span> {{ config('empresa.ruc') }}</div>
+                <div>{{ config('empresa.direccion') }}</div>
+                <div>WhatsApp: {{ config('empresa.celular') }}</div>
             </div>
         </div>
 
@@ -291,7 +289,18 @@
         </div>
 
         <div class="footer text-center">
-            <div class="qr-mock">QR</div>
+            @php
+                $comprobante = $venta->comprobante;
+            @endphp
+            @if(isset($qrCodeBase64) && $qrCodeBase64)
+                <div class="qr-container mb-2">
+                    <img src="data:image/svg+xml;base64,{{ $qrCodeBase64 }}" alt="QR">
+                </div>
+            @elseif(isset($venta->comprobante) && $venta->comprobante->codigo_qr)
+                <div class="qr-container mb-2">
+                    <img src="data:image/svg+xml;base64,{{ base64_encode((string) SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(90)->margin(0)->generate($venta->comprobante->codigo_qr)) }}" alt="QR">
+                </div>
+            @endif
             <p class="thanks">¡GRACIAS POR SU COMPRA!</p>
             <p class="thanks-sub">Vuelva pronto</p>
         </div>

@@ -10,6 +10,7 @@ const ventaStore = useVentaStore();
 const ventas = ref([]);
 const pagination = ref({});
 const loading = ref(false);
+const reenviando = ref(null); // ID de la venta que se está reenviando
 
 const filters = ref({
   fecha_inicio: new Date().toLocaleDateString('en-CA'),
@@ -65,7 +66,10 @@ const onClienteSaved = async (cliente) => {
         //}
     }
 };
-
+const truncate = (text, length = 60) => {
+  if (!text) return '';
+  return text.length > length ? text.substring(0, length) + '...' : text;
+};
 const anularVenta = async (venta) => {
     const { value: motivo } = await Swal.fire({
         title: '¿Anular esta venta?',
@@ -96,6 +100,50 @@ const anularVenta = async (venta) => {
             Swal.fire('Error', error.response?.data?.message || 'No se pudo anular la venta', 'error');
         }
     }
+};
+
+const verMensajeSunat = (venta) => {
+  const mensaje = venta.comprobante.respuesta_sunat?.description 
+    ?? venta.comprobante.respuesta_sunat?.error 
+    ?? 'Sin detalle disponible';
+
+  Swal.fire({
+    title: 'Detalle SUNAT',
+    html: `<div style="text-align:left; font-size:13px;">${mensaje}</div>`,
+    width: 600,
+    confirmButtonText: 'Cerrar'
+  });
+};
+
+const reenviarComprobante = async (venta) => {
+  const confirm = await Swal.fire({
+    title: '¿Reenviar a SUNAT?',
+    html: `Se intentará enviar el comprobante <strong>${venta.comprobante.numero_comprobante}</strong> a SUNAT nuevamente.`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, reenviar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#f59e0b',
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  reenviando.value = venta.id;
+  try {
+    const result = await ventaStore.reenviarComprobante(venta.id);
+    const nuevoEstado = result?.data?.comprobante?.estado_sunat;
+
+    if (nuevoEstado === 'aceptado') {
+      Swal.fire('¡Aceptado!', 'El comprobante fue aceptado por SUNAT.', 'success');
+    } else {
+      Swal.fire('Pendiente', 'No se pudo enviar aún. Intenta nuevamente cuando haya conexión.', 'warning');
+    }
+    fetchVentas(filters.value.page);
+  } catch (error) {
+    Swal.fire('Error', error.response?.data?.message || 'No se pudo reenviar el comprobante.', 'error');
+  } finally {
+    reenviando.value = null;
+  }
 };
 
 onMounted(() => {
@@ -158,6 +206,8 @@ watch(() => filters.value.search, () => {
               <th class="py-3 text-uppercase small fw-bold text-muted">Cliente</th>
               <th class="py-3 text-uppercase small fw-bold text-muted">Total</th>
               <th class="py-3 text-uppercase small fw-bold text-muted">Comprobante</th>
+              <th class="py-3 text-uppercase small fw-bold text-muted text-center">Estado SUNAT</th>
+              <th class="py-3 text-uppercase small fw-bold text-muted text-center">Mensaje SUNAT</th>
               <th class="pe-4 py-3 text-end text-uppercase small fw-bold text-muted">Acciones</th>
             </tr>
           </thead>
@@ -196,21 +246,85 @@ watch(() => filters.value.search, () => {
                 <span class="fw-bold text-primary">S/ {{ venta.total }}</span>
               </td>
               <td>
-                <span v-if="venta.comprobante" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3">
-                  {{ venta.comprobante.tipo.toUpperCase() }}: {{ venta.comprobante.serie }}-{{ venta.comprobante.correlativo }}
+                <span v-if="venta.comprobante" class="badge rounded-pill bg-white text-dark border px-3 shadow-sm">
+                  <span class="text-primary fw-bold">{{ venta.comprobante.tipo?.toUpperCase() }}</span>: {{ venta.comprobante.serie }}-{{ venta.comprobante.correlativo }}
                 </span>
                 <span v-else class="badge rounded-pill bg-light text-muted border px-3">
-                  Pendiente
+                  TICKET
                 </span>
               </td>
+              <td class="text-center">
+                <template v-if="venta.comprobante">
+                    <span v-if="venta.comprobante.estado_sunat === 'aceptado'" 
+                          class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3"
+                          title="Comprobante aceptado por SUNAT">
+                      <i class="fas fa-check-circle me-1"></i> ACEPTADO
+                    </span>
+                    <span v-else-if="venta.comprobante.estado_sunat === 'rechazado'" 
+                          class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 cursor-help"
+                          :title="venta.comprobante.respuesta_sunat?.error || venta.comprobante.respuesta_sunat?.exception || 'Rechazado por SUNAT'">
+                      <i class="fas fa-times-circle me-1"></i> RECHAZADO
+                    </span>
+                    <span v-else 
+                          class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3"
+                          title="Pendiente de envío a SUNAT">
+                      <i class="fas fa-clock me-1"></i> PENDIENTE
+                    </span>
+                </template>
+                <span v-else class="text-muted small">---</span>
+              </td>
+              <td class="text-center">
+                <template v-if="venta.comprobante">
+                  <div class="d-flex align-items-center justify-content-center gap-2">
+                    
+                    <!-- Texto recortado -->
+                    <span class="text-muted small text-truncate-sunat" :title="venta.comprobante.respuesta_sunat?.description ?? venta.comprobante.respuesta_sunat?.error">
+                      {{ truncate(
+                        venta.comprobante.respuesta_sunat?.description 
+                        ?? venta.comprobante.respuesta_sunat?.error
+                      ) }}
+                    </span>
+
+                    <!-- Botón ver más -->
+                    <button 
+                      v-if="(venta.comprobante.respuesta_sunat?.description ?? venta.comprobante.respuesta_sunat?.error)?.length > 60"
+                      class="btn btn-sm btn-outline-secondary rounded-circle"
+                      @click="verMensajeSunat(venta)"
+                      title="Ver detalle completo"
+                    >
+                      <i class="fas fa-eye"></i>
+                    </button>
+
+                  </div>
+                </template>
+
+                <span v-else class="text-muted small">---</span>
+              </td>
               <td class="pe-4 text-end">
-                <div class="d-flex justify-content-end gap-2">
+                <div class="d-flex justify-content-end gap-2 flex-wrap">
                   <button class="btn btn-sm btn-outline-primary rounded-pill px-3 border-2 fw-bold" @click="verTicket(venta)">
                     <i class="fas fa-receipt me-1"></i> TICKET
                   </button>
-                  <button 
+
+                  <!-- Botón REENVIAR: solo visible si el comprobante está PENDIENTE (no rechazado) -->
+                  <button
+                    v-if="venta.comprobante && venta.comprobante.estado_sunat === 'pendiente' && venta.estado !== 'anulada'"
+                    class="btn btn-sm btn-outline-warning rounded-pill px-3 border-2 fw-bold"
+                    @click="reenviarComprobante(venta)"
+                    :disabled="reenviando === venta.id"
+                    title="Reenviar comprobante pendiente a SUNAT"
+                  >
+                    <span v-if="reenviando === venta.id">
+                      <i class="fas fa-spinner fa-spin me-1"></i> Enviando...
+                    </span>
+                    <span v-else>
+                      <i class="fas fa-paper-plane me-1"></i> REENVIAR
+                    </span>
+                  </button>
+
+                  <button
                     v-if="venta.estado !== 'anulada'"
-                    class="btn btn-sm btn-outline-danger rounded-pill px-3 border-2 fw-bold" 
+                    class="btn btn-sm btn-outline-danger rounded-pill px-3 border-2 fw-bold"
                     @click="anularVenta(venta)"
                   >
                     <i class="fas fa-ban me-1"></i> ANULAR
@@ -266,6 +380,14 @@ watch(() => filters.value.search, () => {
 
 .table tr:hover {
   background-color: rgba(var(--bs-primary-rgb), 0.02);
+}
+
+.text-truncate-sunat {
+  max-width: 250px;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .page-link:hover {

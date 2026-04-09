@@ -44,12 +44,16 @@
         </router-link>
 
         <!-- Configuración -->
-        <div v-if="!isCollapsed" class="nav-section-title px-4 pt-3 pb-1 text-uppercase small text-muted fw-bold">
+        <div v-if="!isCollapsed" class="nav-section-title px-4 pt-3 pb-1 text-uppercase small text-white fw-bold">
           Configuración
         </div>
         <router-link v-can="'ver usuarios'" to="/usuarios" class="nav-item">
           <i class="fas fa-users-cog"></i>
           <span v-if="!isCollapsed">Usuarios</span>
+        </router-link>
+        <router-link v-can="'ver clientes'" to="/clientes" class="nav-item">
+          <i class="fas fa-id-card"></i>
+          <span v-if="!isCollapsed">Clientes</span>
         </router-link>
         <router-link v-can="'ver configuracion'" to="/roles" class="nav-item">
           <i class="fas fa-user-shield"></i>

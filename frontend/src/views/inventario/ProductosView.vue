@@ -211,7 +211,10 @@ const handleDelete = async (producto) => {
             <tr v-for="producto in productosFiltrados" :key="producto?.id">
               <td><span class="badge bg-light text-dark font-monospace border">{{ producto.codigo || 'S/N' }}</span></td>
               <td class="fw-bold text-dark">{{ producto.nombre }}</td>
-              <td>{{ producto.categoria?.nombre || 'Sin categoría' }}</td>
+              <td>
+                <i v-if="producto.categoria?.icono" :class="['fas', producto.categoria.icono, 'me-1']" :style="{ color: producto.categoria.color || 'inherit' }"></i>
+                {{ producto.categoria?.nombre || 'Sin categoría' }}
+              </td>
               <td>
                 <span class="badge rounded-pill bg-info-subtle text-info px-3 small border border-info-subtle">
                   {{ producto.tipo?.toUpperCase() || '—' }}

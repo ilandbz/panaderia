@@ -14,9 +14,24 @@ class InitialDataSeeder extends Seeder
         // =========================
         // CATEGORÍAS
         // =========================
-        $panaderia = Categoria::create(['nombre' => 'Panadería', 'activo' => true]);
-        $pasteleria = Categoria::create(['nombre' => 'Pastelería', 'activo' => true]);
-        $abarrotes = Categoria::create(['nombre' => 'Abarrotes', 'activo' => true]);
+        $panaderia = Categoria::create([
+            'nombre' => 'Panadería',
+            'icono' => 'fa-bread-slice',
+            'color' => '#d97706',
+            'activo' => true
+        ]);
+        $pasteleria = Categoria::create([
+            'nombre' => 'Pastelería',
+            'icono' => 'fa-birthday-cake',
+            'color' => '#db2777',
+            'activo' => true
+        ]);
+        $abarrotes = Categoria::create([
+            'nombre' => 'Abarrotes',
+            'icono' => 'fa-shopping-basket',
+            'color' => '#059669',
+            'activo' => true
+        ]);
 
         // =========================
         // PANADERÍA

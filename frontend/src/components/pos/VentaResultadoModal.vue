@@ -34,9 +34,11 @@ const tipoComprobante = computed(() => {
 const esTicket = computed(() => tipoComprobante.value === 'ticket');
 const esBoleta = computed(() => tipoComprobante.value === 'boleta');
 const esFactura = computed(() => tipoComprobante.value === 'factura');
+const estadoSunat = computed(() => props.venta?.comprobante?.estado_sunat || 'pendiente');
 
 const puedeGenerarComprobante = computed(() => {
-  return esTicket.value && !!props.venta?.id;
+  // Se puede generar si es ticket O si el comprobante actual no fue aceptado por SUNAT
+  return esTicket.value || estadoSunat.value !== 'aceptado';
 });
 
 const cargarPdf = async () => {
@@ -208,7 +210,7 @@ const cerrar = () => {
                   </div>
                 </div>
                 <div class="mt-3 pt-3 border-top text-start">
-                    <div v-if="esTicket" class="client-assign-tool mb-3">
+                    <div v-if="esTicket || estadoSunat === 'rechazado'" class="client-assign-tool mb-3">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                              <label class="extrasmall fw-bold text-primary text-uppercase tracking-wider">¿Vincular a otro cliente?</label>
                              <button class="btn btn-xs btn-link p-0 text-decoration-none fw-bold small" @click="abrirNuevoCliente">+ NUEVO</button>
@@ -237,6 +239,25 @@ const cerrar = () => {
                         <span class="text-muted text-uppercase">Fecha:</span>
                         <span class="fw-bold">{{ venta?.created_at ? new Date(venta.created_at).toLocaleString() : '---' }}</span>
                     </div>
+
+                    <!-- SUNAT Status Section -->
+                    <div v-if="venta?.comprobante" class="mt-3 p-2 rounded-3 text-center" 
+                         :class="{
+                             'bg-success-subtle text-success border border-success-subtle': estadoSunat === 'aceptado',
+                             'bg-danger-subtle text-danger border border-danger-subtle': estadoSunat === 'rechazado',
+                             'bg-warning-subtle text-warning border border-warning-subtle': estadoSunat === 'pendiente'
+                         }">
+                        <div class="extrasmall fw-bold text-uppercase tracking-widest mb-1">Estado SUNAT</div>
+                        <div class="small fw-bold">
+                            <i v-if="estadoSunat === 'aceptado'" class="fas fa-check-circle me-1"></i>
+                            <i v-else-if="estadoSunat === 'rechazado'" class="fas fa-times-circle me-1"></i>
+                            <i v-else class="fas fa-clock me-1"></i>
+                            {{ estadoSunat.toUpperCase() }}
+                        </div>
+                        <div v-if="estadoSunat === 'rechazado'" class="extrasmall mt-1 text-dark text-start">
+                            <strong>Motivo:</strong> {{ venta.comprobante.respuesta_sunat?.error || venta.comprobante.respuesta_sunat?.exception || 'Error desconocido' }}
+                        </div>
+                    </div>
                 </div>
               </div>
 
@@ -260,7 +281,7 @@ const cerrar = () => {
                         :disabled="!puedeGenerarComprobante"
                         @click="generarComprobante('boleta')"
                       >
-                        BOLETA
+                        {{ esBoleta && estadoSunat === 'rechazado' ? 'REINTENTAR BOLETA' : 'BOLETA' }}
                       </button>
                     </div>
                     <div class="col-6">
@@ -270,7 +291,7 @@ const cerrar = () => {
                         :disabled="!puedeGenerarComprobante"
                         @click="generarComprobante('factura')"
                       >
-                        FACTURA
+                        {{ esFactura && estadoSunat === 'rechazado' ? 'REINTENTAR FACTURA' : 'FACTURA' }}
                       </button>
                     </div>
                   </div>

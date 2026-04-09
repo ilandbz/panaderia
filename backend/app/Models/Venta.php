@@ -56,6 +56,6 @@ class Venta extends Model
 
     public function comprobante()
     {
-        return $this->hasOne(Comprobante::class);
+        return $this->hasOne(Comprobante::class)->latestOfMany();
     }
 }

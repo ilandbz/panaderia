@@ -76,12 +76,57 @@ class CajaController extends Controller
         }
     }
 
+    public function registrarIngreso(Request $request)
+    {
+        $data = $request->validate([
+            'concepto' => 'required|string|max:200',
+            'monto'    => 'required|numeric|min:0.1',
+            'observacion' => 'nullable|string',
+        ]);
+
+        $data['usuario_id'] = $request->user()->id;
+
+        try {
+            $ingreso = $this->service->registrarIngreso($data);
+            return $this->successResponse($ingreso, 'Ingreso registrado correctamente', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 422);
+        }
+    }
+
     public function estado(Request $request)
     {
         $apertura = AperturaCaja::where('usuario_id', $request->user()->id)
                                 ->where('estado', 'abierta')
-                                ->with(['usuario' => fn($q) => $q->select('id', 'nombre', 'apellido')])
+                                ->with([
+                                    'usuario' => fn($q) => $q->select('id', 'nombre', 'apellido'),
+                                    'movimientos' => fn($q) => $q->orderBy('created_at', 'desc')
+                                ])
                                 ->first();
+
+        return $this->successResponse($apertura);
+    }
+
+    public function historial(Request $request)
+    {
+        $historial = AperturaCaja::where('usuario_id', $request->user()->id)
+                                ->where('estado', 'cerrada')
+                                ->with(['usuario', 'cerrador'])
+                                ->orderBy('fecha_cierre', 'desc')
+                                ->paginate(10);
+
+        return $this->successResponse($historial);
+    }
+
+    public function show(Request $request, $id)
+    {
+        $apertura = AperturaCaja::where('usuario_id', $request->user()->id)
+                                ->with([
+                                    'usuario',
+                                    'cerrador',
+                                    'movimientos' => fn($q) => $q->orderBy('created_at', 'asc')
+                                ])
+                                ->findOrFail($id);
 
         return $this->successResponse($apertura);
     }

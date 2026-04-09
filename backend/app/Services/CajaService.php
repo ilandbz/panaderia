@@ -61,9 +61,30 @@ class CajaService
         }
 
         return MovimientoCaja::create([
-            'aperturas_caja_id' => $apertura->id,
+            'apertura_caja_id' => $apertura->id,
             'usuario_id'        => $data['usuario_id'],
             'tipo'              => 'egreso',
+            'concepto'          => $data['concepto'],
+            'monto'             => $data['monto'],
+            'forma_pago'        => 'efectivo',
+            'observacion'       => $data['observacion'] ?? null,
+        ]);
+    }
+
+    public function registrarIngreso(array $data)
+    {
+        $apertura = AperturaCaja::where('estado', 'abierta')
+                                ->where('usuario_id', $data['usuario_id'])
+                                ->first();
+
+        if (!$apertura) {
+            throw new \Exception('No hay una caja abierta.');
+        }
+
+        return MovimientoCaja::create([
+            'apertura_caja_id' => $apertura->id,
+            'usuario_id'        => $data['usuario_id'],
+            'tipo'              => 'ingreso',
             'concepto'          => $data['concepto'],
             'monto'             => $data['monto'],
             'forma_pago'        => 'efectivo',

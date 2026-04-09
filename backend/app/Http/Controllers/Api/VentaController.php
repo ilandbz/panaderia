@@ -9,6 +9,7 @@ use App\Services\VentaService;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class VentaController extends Controller
 {
@@ -101,38 +102,39 @@ class VentaController extends Controller
         $data = $request->validate([
             'tipo' => 'required|in:boleta,factura',
         ]);
-
         try {
             $venta = Venta::findOrFail($id);
-
             $venta->update(['tipo_comprobante' => $data['tipo']]);
-
             $facturacionService = app(FacturacionService::class);
             $facturacionService->generar($venta);
             $venta->load('comprobante');
-
-
             return $this->successResponse($venta, 'Venta registrada con éxito', 201);
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 422);
+        }
+    }
 
+    public function reenviarComprobante(Request $request, $id)
+    {
+        $venta = Venta::with(['comprobante', 'detalles.producto', 'cliente'])->findOrFail($id);
 
-            // $format = $request->get('format', '80mm');
-            // $paperWidth = $format === '58mm' ? 164.41 : 226.77;
-            // $paperHeight = 1000;
+        if (!$venta->comprobante) {
+            return $this->errorResponse('Esta venta no tiene un comprobante generado.', 422);
+        }
 
+        if ($venta->comprobante->estado_sunat !== 'pendiente') {
+            return $this->errorResponse(
+                'Solo se pueden reenviar comprobantes en estado pendiente. ' .
+                'Los rechazados no deben reenviarse (el número ya fue usado en SUNAT).',
+                422
+            );
+        }
 
-            // $datos = [
-            //     'venta' => $venta->load('comprobante', 'detalles.producto', 'usuario', 'cliente'),
-            //     'format' => $format,
-            // ];
-
-
-            // $pdf = Pdf::loadView('pdfs.comprobante', $datos)
-            //     ->setPaper([0, 0, $paperWidth, $paperHeight], 'portrait');
-
-            // return response($pdf->output(), 200, [
-            //     'Content-Type' => 'application/pdf',
-            //     'Content-Disposition' => 'inline; filename="' . $data['tipo'] . '_' . $venta->numero_venta . '.pdf"',
-            // ]);
+        try {
+            $facturacionService = app(FacturacionService::class);
+            $facturacionService->reenviar($venta);
+            $venta->load('comprobante');
+            return $this->successResponse($venta, 'Comprobante reenviado a SUNAT correctamente.');
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 422);
         }
@@ -153,7 +155,13 @@ class VentaController extends Controller
             // y recortar o simplemente usar un papel continuo simulado.
             $height = 600; // Altura base para tickets largos
 
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.comprobante', compact('venta', 'format'));
+            $qrCodeBase64 = null;
+            if ($venta->comprobante && $venta->comprobante->codigo_qr) {
+                // Generar QR en formato SVG para mayor compatibilidad y calidad en PDF
+                $qrCodeBase64 = base64_encode((string) QrCode::format('svg')->size(100)->margin(0)->generate($venta->comprobante->codigo_qr));
+            }
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdfs.comprobante', compact('venta', 'format', 'qrCodeBase64'));
             $pdf->setPaper([0, 0, $width, $height], 'portrait');
 
             return $pdf->stream("ticket-{$venta->numero_venta}.pdf");
@@ -165,7 +173,7 @@ class VentaController extends Controller
     public function anular(Request $request, $id)
     {
         $venta = Venta::with('comprobante')->findOrFail($id);
-        
+
         $rules = [
             'motivo' => 'required|string|min:5|max:200'
         ];
@@ -184,7 +192,7 @@ class VentaController extends Controller
     public function imprimirTicket($id, Request $request)
     {
         try {
-            $venta = Venta::with(['detalles.producto', 'usuario'])->findOrFail($id);
+            $venta = Venta::with(['detalles.producto', 'usuario', 'comprobante', 'cliente'])->findOrFail($id);
             $format = $request->get('format', '80mm');
             $tipo = $request->get('tipo', 'ticket');
 
@@ -192,11 +200,21 @@ class VentaController extends Controller
             $paperHeight = 1000;
 
             if ($tipo === 'ticket') {
-                $pdf = Pdf::loadView('ticket.impresion', compact('venta', 'format', 'tipo'))
+                $qrCodeBase64 = null;
+                if ($venta->comprobante && $venta->comprobante->codigo_qr) {
+                    $qrCodeBase64 = base64_encode((string) QrCode::format('svg')->size(100)->margin(0)->generate($venta->comprobante->codigo_qr));
+                }
+
+                $pdf = Pdf::loadView('ticket.impresion', compact('venta', 'format', 'tipo', 'qrCodeBase64'))
                     ->setPaper([0, 0, $paperWidth, $paperHeight], 'portrait');
             } else {
 
-                $venta->load('comprobante', 'detalles.producto', 'usuario', 'cliente');
+                $venta->loadMissing('comprobante', 'detalles.producto', 'usuario', 'cliente');
+
+                $qrCodeBase64 = null;
+                if ($venta->comprobante && $venta->comprobante->codigo_qr) {
+                    $qrCodeBase64 = base64_encode((string) QrCode::format('svg')->size(120)->margin(0)->generate($venta->comprobante->codigo_qr));
+                }
 
                 $datos = [
                     'venta' => $venta,
@@ -206,6 +224,7 @@ class VentaController extends Controller
                     'cliente' => $venta->cliente,
                     'format' => $format,
                     'tipo' => $tipo,
+                    'qrCodeBase64' => $qrCodeBase64
                 ];
 
                 $pdf = Pdf::loadView('pdfs.comprobante', $datos)

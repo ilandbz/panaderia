@@ -65,6 +65,12 @@ const routes = [
                 meta: { auth: true, permission: 'ver usuarios' }
             },
             {
+                path: 'clientes',
+                name: 'Clientes',
+                component: () => import('@/views/configuracion/ClientesView.vue'),
+                meta: { auth: true, permission: 'ver clientes' }
+            },
+            {
                 path: 'roles',
                 name: 'Roles',
                 component: () => import('@/views/configuracion/RolesView.vue'),
