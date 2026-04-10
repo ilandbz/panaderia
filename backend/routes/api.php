@@ -40,6 +40,21 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Reportes & Dashboard
     Route::get('/dashboard', [ReporteController::class, 'dashboard']);
+    Route::prefix('reportes')->group(function () {
+        Route::get('/ventas',           [ReporteController::class, 'ventas']);
+        Route::get('/productos-top',    [ReporteController::class, 'productosTop']);
+        Route::get('/utilidad',         [ReporteController::class, 'utilidad']);
+        Route::get('/ventas-usuario',   [ReporteController::class, 'ventasPorUsuario']);
+        Route::get('/caja',             [ReporteController::class, 'caja']);
+        Route::get('/mermas',           [ReporteController::class, 'mermas']);
+        Route::get('/stock-bajo',       [ReporteController::class, 'stockBajo']);
+        Route::get('/por-vencer',       [ReporteController::class, 'porVencer']);
+        Route::get('/forma-pago',       [ReporteController::class, 'formaPago']);
+        // Exportación Excel
+        Route::get('/export/ventas',         [ReporteController::class, 'exportVentas']);
+        Route::get('/export/productos-top',  [ReporteController::class, 'exportProductosTop']);
+        Route::get('/export/stock-bajo',     [ReporteController::class, 'exportStockBajo']);
+    });
 
     // Ventas
     Route::apiResource('ventas', VentaController::class)->only(['index', 'store', 'show', 'update']);

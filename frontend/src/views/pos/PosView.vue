@@ -16,6 +16,8 @@ const clienteStore = useClienteStore();
 const loadingPdf = ref(false);
 const search = ref('');
 const selectedCategory = ref(0);
+const currentPage = ref(1);
+const perPage = 8;
 const cart = ref([]);
 const tipoComprobante = ref('ticket');
 const conIgv = ref(false);
@@ -130,6 +132,16 @@ const filteredProducts = computed(() => {
   });
 });
 
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / perPage));
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * perPage;
+  return filteredProducts.value.slice(start, start + perPage);
+});
+
+// Reset page when filter changes
+watch([search, selectedCategory], () => { currentPage.value = 1; });
+
 const addToCart = (product) => {
   if (!cajaStore.isCajaAbierta) {
     Swal.fire('Atención', 'Debe abrir caja para realizar ventas', 'warning');
@@ -229,10 +241,10 @@ const nuevaVenta = () => {
 <template>
   <div class="pos-view h-100 d-flex flex-column bg-light">
     <!-- Main POS UI (Screen Only) -->
-    <div class="row g-3 flex-grow-1 overflow-hidden no-print p-3">
+    <div class="row g-3 flex-grow-1 no-print p-3">
       <!-- Products Column -->
       <div class="col-lg-8 h-100 d-flex flex-column">
-        <div class="card border-0 rounded-4 shadow-sm mb-3 overflow-hidden">
+        <div class="card border-0 rounded-4 shadow-sm mb-3">
           <div class="card-body p-3 bg-white">
             <div class="input-group mb-3 bg-light rounded-pill px-3 py-1">
               <span class="input-group-text bg-transparent border-0"><i class="fas fa-search text-muted"></i></span>
@@ -251,21 +263,61 @@ const nuevaVenta = () => {
         </div>
 
         <div class="products-grid flex-grow-1 overflow-auto pe-2 custom-scrollbar">
-           <div class="row g-3">
-             <div v-for="product in filteredProducts" :key="product.id" class="col-md-3">
-               <div class="card product-card border-0 rounded-4 shadow-sm h-100 position-relative transition-all" @click="addToCart(product)">
-                 <div class="card-img-top p-4 text-center bg-light-subtle rounded-top-4">
-                    <i class="fas fa-3x text-primary opacity-25" :class="product.categoria.icono"></i>
-                    <span v-if="product.stock <= 0" class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm">SIN STOCK</span>
-                 </div>
-                 <div class="card-body p-3 text-center">
-                   <div class="small fw-bold text-truncate text-dark mb-1">{{ product.nombre }}</div>
-                   <div class="text-primary fw-bold fs-5">S/ {{ product.precio_venta }}</div>
-                   <div class="extrasmall text-muted mt-1">Stock: <span :class="product.stock < 10 ? 'text-danger fw-bold' : ''">{{ product.stock }}</span></div>
-                 </div>
-               </div>
-             </div>
-           </div>
+          <!-- Spinner de carga -->
+          <div v-if="productStore.loading" class="d-flex flex-column align-items-center justify-content-center py-5 mt-3">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="text-muted small fw-semibold">Cargando productos...</p>
+          </div>
+
+          <!-- Grid de productos -->
+          <div v-else>
+            <div v-if="paginatedProducts.length === 0" class="text-center py-5 text-muted">
+              <div class="display-4 mb-3 opacity-25"><i class="fas fa-box-open"></i></div>
+              <p class="fw-bold">No se encontraron productos</p>
+            </div>
+
+            <div class="row g-3">
+              <div v-for="product in paginatedProducts" :key="product.id" class="col-6 col-md-3">
+                <div class="card product-card border-0 rounded-4 shadow-sm h-100 position-relative transition-all" @click="addToCart(product)">
+                  <div class="card-img-top p-4 text-center bg-light-subtle rounded-top-4">
+                     <i class="fas fa-3x text-primary opacity-25" :class="product.categoria.icono"></i>
+                     <span v-if="product.stock <= 0" class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm">SIN STOCK</span>
+                  </div>
+                  <div class="card-body p-3 text-center">
+                    <div class="small fw-bold text-truncate text-dark mb-1">{{ product.nombre }}</div>
+                    <div class="text-primary fw-bold fs-5">S/ {{ product.precio_venta }}</div>
+                    <div class="extrasmall text-muted mt-1">Stock: <span :class="product.stock < 10 ? 'text-danger fw-bold' : ''">{{ product.stock }}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Paginación -->
+            <div v-if="totalPages > 1" class="d-flex align-items-center justify-content-between mt-4 pb-2">
+              <span class="small text-muted">
+                Mostrando {{ (currentPage - 1) * perPage + 1 }}–{{ Math.min(currentPage * perPage, filteredProducts.length) }} de {{ filteredProducts.length }} productos
+              </span>
+              <nav aria-label="Navegación de productos">
+                <ul class="pagination pagination-sm mb-0">
+                  <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                    <button class="page-link rounded-start-pill" @click="currentPage--" :disabled="currentPage === 1">
+                      <i class="fas fa-chevron-left"></i>
+                    </button>
+                  </li>
+                  <li v-for="page in totalPages" :key="page" class="page-item" :class="{ active: currentPage === page }">
+                    <button class="page-link" @click="currentPage = page">{{ page }}</button>
+                  </li>
+                  <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                    <button class="page-link rounded-end-pill" @click="currentPage++" :disabled="currentPage === totalPages">
+                      <i class="fas fa-chevron-right"></i>
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
 

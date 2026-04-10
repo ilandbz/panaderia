@@ -42,6 +42,10 @@
           <i class="fas fa-shopping-bag"></i>
           <span v-if="!isCollapsed">Compras</span>
         </router-link>
+        <router-link to="/reportes" class="nav-item">
+          <i class="fas fa-chart-bar"></i>
+          <span v-if="!isCollapsed">Reportes</span>
+        </router-link>
 
         <!-- Configuración -->
         <div v-if="!isCollapsed" class="nav-section-title px-4 pt-3 pb-1 text-uppercase small text-white fw-bold">
