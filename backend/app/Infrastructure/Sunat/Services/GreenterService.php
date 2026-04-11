@@ -16,20 +16,20 @@ class GreenterService
 
         // Configuración de Credenciales
         $config = config('facturacion');
-        
+
         $see->setCredentials(
             $config['ruc'] . ($config['user'] ? $config['user'] : 'MODODATOS'),
             $config['password'] ? $config['password'] : 'MODODATOS'
         );
 
         // Certificado y Llave Privada (Greenter necesita ambos para firmar)
-        $cert = file_get_contents(storage_path('cert.pem'));
-        $key  = file_get_contents(storage_path('key.pem'));
+        $cert = file_get_contents(storage_path('app/certificado/convertido/cert.pem'));
+        $key  = file_get_contents(storage_path('app/certificado/convertido/key.pem'));
         $see->setCertificate($cert . "\n" . $key);
 
         // SUNAT endpoint (beta o prod)
-        $endpoint = ($config['modo'] === 'produccion') 
-            ? SunatEndpoints::FE_PRODUCCION 
+        $endpoint = ($config['modo'] === 'produccion')
+            ? SunatEndpoints::FE_PRODUCCION
             : SunatEndpoints::FE_BETA;
 
         $see->setService($endpoint);
