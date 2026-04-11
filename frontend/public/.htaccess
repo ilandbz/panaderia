@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Si el archivo o directorio físico existe, servir directamente
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # De lo contrario, redirigir todo a index.html (Vue Router se encarga del resto)
+    RewriteRule ^ index.html [L]
+</IfModule>
