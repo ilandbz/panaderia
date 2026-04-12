@@ -41,7 +41,7 @@ class GreenterService
         //     : SunatEndpoints::FE_BETA;
 
 
-        $endpoint = 'https://www.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl';
+        $endpoint = 'https://ww1.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl';
 
         $see->setService($endpoint);
 
