@@ -22,9 +22,18 @@ class GreenterService
             $config['password'] ? $config['password'] : 'MODODATOS'
         );
 
+        if ($config['modo'] === 'beta') {
+            $cert = file_get_contents(storage_path('cert.pem'));
+            $key  = file_get_contents(storage_path('key.pem'));
+        } else {
+            $cert = file_get_contents(storage_path('app/certificado/convertido/cert.pem'));
+            $key  = file_get_contents(storage_path('app/certificado/convertido/key.pem'));
+        }
+
+
         // Certificado y Llave Privada (Greenter necesita ambos para firmar)
-        $cert = file_get_contents(storage_path('cert.pem'));
-        $key  = file_get_contents(storage_path('key.pem'));
+        //  $cert = file_get_contents(storage_path('cert.pem'));
+        // $key  = file_get_contents(storage_path('key.pem'));
 
 
         // $cert = file_get_contents(storage_path('app/certificado/convertido/cert.pem'));
