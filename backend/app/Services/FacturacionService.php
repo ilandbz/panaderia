@@ -410,10 +410,10 @@ class FacturacionService
             ->setRazonSocial($config['razon_social'])
             ->setNombreComercial($config['razon_social'])
             ->setAddress((new Address())
-                ->setUbigueo('150101') // Lima - Lima - Lima (ajustar)
-                ->setDepartamento('LIMA')
-                ->setProvincia('LIMA')
-                ->setDistrito('LIMA')
+                ->setUbigueo('100101')
+                ->setDepartamento('HUANUCO')
+                ->setProvincia('HUANUCO')
+                ->setDistrito('HUANUCO')
                 ->setDireccion($config['direccion']));
 
         return $company;
