@@ -36,12 +36,11 @@ class GreenterService
         $see->setCertificate($cert . "\n" . $key);
 
         // SUNAT endpoint (beta o prod)
-        // $endpoint = ($config['modo'] === 'produccion')
-        //     ? SunatEndpoints::FE_PRODUCCION
-        //     : SunatEndpoints::FE_BETA;
+        $endpoint = ($config['modo'] === 'produccion')
+            ? SunatEndpoints::FE_PRODUCCION
+            : SunatEndpoints::FE_BETA;
 
 
-        $endpoint = 'https://ww1.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl';
 
         $see->setService($endpoint);
 
