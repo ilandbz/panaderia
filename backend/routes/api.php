@@ -19,7 +19,7 @@ use App\Http\Controllers\Api\RoleController;
 // Auth
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/ventas/{venta}/impresion', [VentaController::class, 'imprimirTicket']);
-
+Route::get('/ventas/sunat-config', [VentaController::class, 'sunatConfig']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
@@ -61,7 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ventas/{venta}/anular', [VentaController::class, 'anular']);
     Route::post('/ventas/{venta}/generar-comprobante', [VentaController::class, 'generarComprobante']);
     Route::post('/ventas/{venta}/reenviar-comprobante', [VentaController::class, 'reenviarComprobante']);
-    Route::get('/ventas/sunat-config', [VentaController::class, 'sunatConfig']);
+
     Route::get('/ventas/{venta}/pdf', [VentaController::class, 'downloadPdf']);
 
     // Caja
