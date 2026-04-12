@@ -172,6 +172,26 @@ const verMensajeSunat = (venta) => {
   });
 };
 
+const canReenviar = (venta) => {
+  if (!venta.comprobante || venta.estado === 'anulada') return false;
+  
+  const estado = venta.comprobante.estado_sunat;
+  if (estado === 'pendiente') return true;
+  
+  if (estado === 'rechazado') {
+      const respuesta = venta.comprobante.respuesta_sunat;
+      const mensaje = (
+          (respuesta?.description || '') + 
+          (respuesta?.error || '') + 
+          (respuesta?.exception || '')
+      ).toLowerCase();
+      
+      return mensaje.includes('perfil') || mensaje.includes('policy');
+  }
+  
+  return false;
+};
+
 const reenviarComprobante = async (venta) => {
   const confirm = await Swal.fire({
     title: '¿Reenviar a SUNAT?',
@@ -400,13 +420,13 @@ watch(() => filters.value.search, () => {
                     <i class="fas fa-receipt me-1"></i> TICKET
                   </button>
 
-                  <!-- Botón REENVIAR: solo visible si el comprobante está PENDIENTE (no rechazado) -->
+                  <!-- Botón REENVIAR: visible si está PENDIENTE o RECHAZADO por error de perfil/policy -->
                   <button
-                    v-if="venta.comprobante && venta.comprobante.estado_sunat === 'pendiente' && venta.estado !== 'anulada'"
+                    v-if="canReenviar(venta)"
                     class="btn btn-sm btn-outline-warning rounded-pill px-3 border-2 fw-bold"
                     @click="reenviarComprobante(venta)"
                     :disabled="reenviando === venta.id"
-                    title="Reenviar comprobante pendiente a SUNAT"
+                    title="Reenviar comprobante a SUNAT"
                   >
                     <span v-if="reenviando === venta.id">
                       <i class="fas fa-spinner fa-spin me-1"></i> Enviando...

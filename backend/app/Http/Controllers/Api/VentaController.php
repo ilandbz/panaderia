@@ -122,10 +122,15 @@ class VentaController extends Controller
             return $this->errorResponse('Esta venta no tiene un comprobante generado.', 422);
         }
 
-        if ($venta->comprobante->estado_sunat !== 'pendiente') {
+        $estado = $venta->comprobante->estado_sunat;
+        $respuesta = $venta->comprobante->respuesta_sunat;
+        $mensaje = strtolower(($respuesta['description'] ?? '') . ($respuesta['error'] ?? '') . ($respuesta['exception'] ?? ''));
+        $esErrorPerfil = str_contains($mensaje, 'perfil') || str_contains($mensaje, 'policy');
+
+        if ($estado !== 'pendiente' && !($estado === 'rechazado' && $esErrorPerfil)) {
             return $this->errorResponse(
-                'Solo se pueden reenviar comprobantes en estado pendiente. ' .
-                'Los rechazados no deben reenviarse (el número ya fue usado en SUNAT).',
+                'Solo se pueden reenviar comprobantes en estado pendiente o rechazados por falta de permisos en el perfil SUNAT. ' .
+                'Otros rechazos no deben reenviarse ya que el número de serie/correlativo ya fue procesado por SUNAT.',
                 422
             );
         }

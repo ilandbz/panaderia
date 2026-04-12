@@ -153,8 +153,13 @@ class FacturacionService
     {
         $comprobante = $venta->comprobante;
 
-        if (!$comprobante || $comprobante->estado_sunat !== 'pendiente') {
-            throw new Exception('Solo se pueden reenviar comprobantes en estado pendiente.');
+        $estado = $comprobante->estado_sunat;
+        $respuesta = $comprobante->respuesta_sunat;
+        $mensaje = strtolower(($respuesta['description'] ?? '') . ($respuesta['error'] ?? '') . ($respuesta['exception'] ?? ''));
+        $esErrorPerfil = str_contains($mensaje, 'perfil') || str_contains($mensaje, 'policy');
+
+        if (!$comprobante || ($estado !== 'pendiente' && !($estado === 'rechazado' && $esErrorPerfil))) {
+            throw new Exception('Solo se pueden reenviar comprobantes en estado pendiente o rechazados por falta de permisos en el perfil SUNAT.');
         }
 
         if (!in_array($comprobante->tipo, ['boleta', 'factura'])) {
