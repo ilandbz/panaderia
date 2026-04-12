@@ -238,7 +238,9 @@ class VentaController extends Controller
             ]);
         } catch (\Exception $e) {
             return "Error al abrir ticket para impresión: " . $e->getMessage();
+        }
     }
+
     public function sunatConfig()
     {
         return $this->successResponse([
