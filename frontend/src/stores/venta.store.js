@@ -92,6 +92,15 @@ export const useVentaStore = defineStore('venta', {
                 console.error('Error fetching PDF:', error);
                 throw error;
             }
+        },
+        async fetchSunatConfig() {
+            try {
+                const response = await api.get('/ventas/sunat-config');
+                return response.data;
+            } catch (error) {
+                console.error('Error fetching SUNAT config:', error);
+                return null;
+            }
         }
     }
 });

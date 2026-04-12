@@ -22,6 +22,15 @@ const selectedVenta = ref(null);
 const { show: showTicket, hide: hideTicket } = useModal('ventaResultadoModal');
 const { show: showClienteModal, hide: hideClienteModal } = useModal('clienteQuickModal');
 
+const sunatConfig = ref(null);
+
+const fetchSunatConfig = async () => {
+    const response = await ventaStore.fetchSunatConfig();
+    if (response && response.success) {
+        sunatConfig.value = response.data;
+    }
+};
+
 const fetchVentas = async (page = 1) => {
   loading.value = true;
   filters.value.page = page;
@@ -107,11 +116,59 @@ const verMensajeSunat = (venta) => {
     ?? venta.comprobante.respuesta_sunat?.error 
     ?? 'Sin detalle disponible';
 
+  const isPerfilError = mensaje.toLowerCase().includes('perfil') || mensaje.toLowerCase().includes('policy');
+
+  let htmlConfig = '';
+  if (sunatConfig.value) {
+    htmlConfig = `
+      <div class="mt-3 p-3 bg-light rounded-3 border">
+        <div class="small fw-bold text-muted text-uppercase mb-2" style="font-size: 10px;">Perfil de Envío Actual</div>
+        <div class="d-flex justify-content-between mb-1">
+          <span class="small text-muted">RUC:</span>
+          <span class="small fw-bold">${sunatConfig.value.ruc}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-1">
+          <span class="small text-muted">Usuario:</span>
+          <span class="small fw-bold">${sunatConfig.value.user}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="small text-muted">Entorno:</span>
+          <span class="badge ${sunatConfig.value.modo === 'produccion' ? 'bg-danger' : 'bg-info'} rounded-pill" style="font-size: 9px;">${sunatConfig.value.modo.toUpperCase()}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  let guide = '';
+  if (isPerfilError) {
+    guide = `
+      <div class="mt-3 p-3 bg-warning-subtle text-dark rounded-3 border border-warning-subtle shadow-sm">
+        <div class="fw-bold mb-1 small text-warning-emphasis"><i class="fas fa-lightbulb me-1"></i> Guía de Solución Sugerida:</div>
+        <p class="mb-0 text-muted" style="font-size: 11px; line-height: 1.4;">
+          Este error indica que el usuario SOL secundario no tiene permisos suficientes para envío electrónico. <br>
+          Para solucionarlo: <br>
+          1. Ingrese al portal <b>SUNAT SOL</b> con su cuenta principal. <br>
+          2. Vaya a <b>Administración de Usuarios</b> y seleccione el usuario secundario. <br>
+          3. En <b>Asignar Roles</b>, busque <b>Comprobantes de Pago</b> -> <b>SEE del Contribuyente</b>. <br>
+          4. Marque las opciones de <b>Envío de Factura/Boleta Electrónica</b>.
+        </p>
+      </div>
+    `;
+  }
+
   Swal.fire({
     title: 'Detalle SUNAT',
-    html: `<div style="text-align:left; font-size:13px;">${mensaje}</div>`,
+    html: `
+      <div style="text-align:left; font-size:13px;">
+        <div class="text-secondary mb-1 small fw-bold">MENSAJE DE SUNAT:</div>
+        <div class="p-3 bg-white border rounded-3 mb-1 text-dark">${mensaje}</div>
+        ${htmlConfig}
+        ${guide}
+      </div>
+    `,
     width: 600,
-    confirmButtonText: 'Cerrar'
+    confirmButtonColor: '#3b82f6',
+    confirmButtonText: 'Entendido'
   });
 };
 
@@ -148,6 +205,7 @@ const reenviarComprobante = async (venta) => {
 
 onMounted(() => {
   fetchVentas();
+  fetchSunatConfig();
 });
 
 watch(() => filters.value.search, () => {

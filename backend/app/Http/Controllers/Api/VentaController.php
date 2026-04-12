@@ -238,6 +238,13 @@ class VentaController extends Controller
             ]);
         } catch (\Exception $e) {
             return "Error al abrir ticket para impresión: " . $e->getMessage();
-        }
+    }
+    public function sunatConfig()
+    {
+        return $this->successResponse([
+            'ruc'  => config('facturacion.ruc'),
+            'user' => config('facturacion.user'),
+            'modo' => config('facturacion.modo'),
+        ]);
     }
 }
