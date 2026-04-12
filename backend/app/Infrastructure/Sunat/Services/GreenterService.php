@@ -42,7 +42,8 @@ class GreenterService
 
 
 
-        $see->setService($endpoint);
+        //$see->setService($endpoint);
+        $see->setService("https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl");
 
         return $see;
     }
