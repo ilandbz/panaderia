@@ -229,6 +229,42 @@ watch(() => filters.value.search, () => {
       </div>
     </div>
 
+    <!-- Panel Temporal de Seguimiento SUNAT (Solicitado por el usuario) -->
+    <div v-if="sunatConfig" class="alert bg-white border-0 shadow-sm rounded-4 mb-4 p-0 overflow-hidden">
+      <div class="bg-primary text-white px-4 py-2 d-flex align-items-center justify-content-between">
+        <span class="small fw-bold"><i class="fas fa-satellite-dish me-2"></i> PANEL DE SEGUIMIENTO SUNAT (TEMPORAL)</span>
+        <button type="button" class="btn-close btn-close-white" @click="sunatConfig = null" aria-label="Close"></button>
+      </div>
+      <div class="p-4">
+        <div class="row align-items-center g-4">
+          <div class="col-md-3">
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 10px;">RUC Emisor</div>
+            <div class="h5 mb-0 fw-bold text-dark">{{ sunatConfig.ruc }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 10px;">Usuario SOL</div>
+            <div class="h5 mb-0 fw-bold text-dark">{{ sunatConfig.user }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 10px;">Entorno SUNAT</div>
+            <div>
+              <span class="badge rounded-pill px-3 py-2 fw-bold" :class="sunatConfig.modo === 'produccion' ? 'bg-danger' : 'bg-info'">
+                <i class="fas" :class="sunatConfig.modo === 'produccion' ? 'fa-rocket' : 'fa-flask'"></i>
+                {{ sunatConfig.modo.toUpperCase() }}
+              </span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 10px;">Estado</div>
+            <div class="d-flex align-items-center text-success fw-bold">
+              <span class="rounded-circle bg-success me-2" style="width: 8px; height: 8px;"></span>
+              Conectado a la API
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Filters Card -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-body p-4">

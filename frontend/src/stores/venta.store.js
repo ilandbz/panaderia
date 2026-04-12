@@ -96,7 +96,7 @@ export const useVentaStore = defineStore('venta', {
         async fetchSunatConfig() {
             try {
                 const response = await api.get('/ventas/sunat-config');
-                return response.data;
+                return response;
             } catch (error) {
                 console.error('Error fetching SUNAT config:', error);
                 return null;
