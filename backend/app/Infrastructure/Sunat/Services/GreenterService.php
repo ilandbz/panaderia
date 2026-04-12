@@ -23,12 +23,12 @@ class GreenterService
         );
 
         // Certificado y Llave Privada (Greenter necesita ambos para firmar)
-        //  $cert = file_get_contents(storage_path('cert.pem'));
-        // $key  = file_get_contents(storage_path('key.pem'));
+        $cert = file_get_contents(storage_path('cert.pem'));
+        $key  = file_get_contents(storage_path('key.pem'));
 
 
-        $cert = file_get_contents(storage_path('app/certificado/convertido/cert.pem'));
-        $key  = file_get_contents(storage_path('app/certificado/convertido/key.pem'));
+        // $cert = file_get_contents(storage_path('app/certificado/convertido/cert.pem'));
+        // $key  = file_get_contents(storage_path('app/certificado/convertido/key.pem'));
 
 
 
@@ -42,8 +42,8 @@ class GreenterService
 
 
 
-        //$see->setService($endpoint);
-        $see->setService("https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl");
+        $see->setService($endpoint);
+        //$see->setService("https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl");
 
         return $see;
     }
