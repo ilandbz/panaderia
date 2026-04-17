@@ -1,0 +1,8 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.sunat.gob.pe">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ser:getStatus>
+         <ticket>202400000000001</ticket>
+      </ser:getStatus>
+   </soapenv:Body>
+</soapenv:Envelope>

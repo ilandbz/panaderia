@@ -31,7 +31,7 @@ class FacturacionService
 
     public function generar(Venta $venta)
     {
-        $serie = ($venta->tipo_comprobante === 'factura') ? 'F001' : 'B001';
+        $serie = ($venta->tipo_comprobante === 'factura') ? 'F001' : 'BA01';
         $ultimo = Comprobante::where('serie', $serie)->max('correlativo') ?? 0;
         $correlativo = $ultimo + 1;
 

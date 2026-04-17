@@ -51,21 +51,19 @@ class VentaController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'cliente_id'       => 'nullable|exists:clientes,id',
-            'subtotal'         => 'required|numeric',
-            'igv'              => 'nullable|numeric',
-            'total'            => 'required|numeric',
-            'monto_pagado'     => 'required|numeric',
-            'forma_pago'       => 'required|string',
-            'items'            => 'required|array|min:1',
+            'cliente_id'        => 'nullable|exists:clientes,id',
+            'subtotal'          => 'required|numeric',
+            'igv'               => 'nullable|numeric',
+            'total'             => 'required|numeric',
+            'monto_pagado'      => 'required|numeric',
+            'forma_pago'        => 'required|string',
+            'items'             => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
             'items.*.cantidad'    => 'required|numeric|min:0.001',
             'items.*.precio_unitario' => 'required|numeric',
             'items.*.subtotal'    => 'required|numeric',
         ]);
-
         $data['usuario_id'] = $request->user()->id;
-
         try {
             $venta = $this->service->registrar($data);
             return $this->successResponse($venta, 'Venta registrada con éxito', 201);
@@ -130,7 +128,7 @@ class VentaController extends Controller
         if ($estado !== 'pendiente' && !($estado === 'rechazado' && $esErrorPerfil)) {
             return $this->errorResponse(
                 'Solo se pueden reenviar comprobantes en estado pendiente o rechazados por falta de permisos en el perfil SUNAT. ' .
-                'Otros rechazos no deben reenviarse ya que el número de serie/correlativo ya fue procesado por SUNAT.',
+                    'Otros rechazos no deben reenviarse ya que el número de serie/correlativo ya fue procesado por SUNAT.',
                 422
             );
         }

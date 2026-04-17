@@ -240,17 +240,14 @@ const nuevaVenta = () => {
 
 <template>
   <div class="pos-view h-100 d-flex flex-column bg-light">
-    <!-- Main POS UI (Screen Only) -->
     <div class="row g-3 flex-grow-1 no-print p-3">
-      <!-- Products Column -->
       <div class="col-lg-8 h-100 d-flex flex-column">
         <div class="card border-0 rounded-4 shadow-sm mb-3">
           <div class="card-body p-3 bg-white">
             <div class="input-group mb-3 bg-light rounded-pill px-3 py-1">
               <span class="input-group-text bg-transparent border-0"><i class="fas fa-search text-muted"></i></span>
               <input v-model="search" type="text" class="form-control border-0 bg-transparent" placeholder="Buscar por nombre o código...">
-            </div>
-            
+            </div>           
             <div class="categories-tabs d-flex gap-2 overflow-auto pb-2 scroll-hide">
               <button v-for="cat in categories" :key="cat.id" 
                       @click="selectedCategory = cat.id"
@@ -321,7 +318,6 @@ const nuevaVenta = () => {
         </div>
       </div>
 
-      <!-- Cart Column -->
       <div class="col-lg-4 h-100 d-flex flex-column">
         <div class="card border-0 rounded-4 shadow-sm flex-grow-1 d-flex flex-column overflow-hidden">
           <div class="card-header bg-white border-0 py-4 px-4 d-flex justify-content-between align-items-center">

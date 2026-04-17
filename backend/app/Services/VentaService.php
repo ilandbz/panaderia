@@ -182,7 +182,6 @@ class VentaService
         $tipo = $data['tipo_comprobante'] ?? 'ticket';
         $total = $data['total'];
         $clienteId = $data['cliente_id'] ?? null;
-
         if ($tipo === 'factura') {
             if (!$clienteId) {
                 throw new \Exception('La factura requiere un cliente seleccionado.');
@@ -195,7 +194,6 @@ class VentaService
                 throw new \Exception('La factura requiere la razón social del cliente.');
             }
         }
-
         if ($tipo === 'boleta' && $total > 700) {
             if (!$clienteId) {
                 throw new \Exception('Boletas mayores a S/ 700 requieren identificación del cliente.');
