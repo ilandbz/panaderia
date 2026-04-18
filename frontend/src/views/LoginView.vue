@@ -47,7 +47,7 @@
           </form>
 
           <div class="mt-5 text-center">
-            <p class="text-muted extrasmall">Jara Bakeware &copy; {{ new Date().getFullYear() }} · Versión 1.0</p>
+            <p class="text-muted extrasmall">Cristian Figueroa &copy; {{ new Date().getFullYear() }} · Versión 1.0</p>
           </div>
         </div>
       </div>

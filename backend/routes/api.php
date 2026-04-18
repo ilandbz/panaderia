@@ -35,7 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('compras', CompraController::class);
 
     // Producción & Recetas
-    Route::get('/recetas', [RecetaController::class, 'index']);
+    Route::apiResource('recetas', RecetaController::class);
     Route::post('/recetas/{receta}/producir', [RecetaController::class, 'producir']);
 
     // Reportes & Dashboard
