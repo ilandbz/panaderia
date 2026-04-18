@@ -24,8 +24,8 @@ const { show: showClienteModal, hide: hideClienteModal } = useModal('clienteQuic
 
 const sunatConfig = ref(null);
 
-const //fetchSunatConfig = async () => {
-    const response = await ventaStore.//fetchSunatConfig();
+const fetchSunatConfig = async () => {
+    const response = await ventaStore.fetchSunatConfig();
     if (response && response.success) {
         sunatConfig.value = response.data;
     }
