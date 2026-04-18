@@ -8,7 +8,7 @@
           <h2 class="display-6 fw-bold">Panadería Jara</h2>
           <p class="lead opacity-75">Sistema Integral de Gestión de Ventas e Inventario</p>
           <div class="mt-4">
-             <img src="https://img.freepik.com/free-vector/bread-bakery-logo-design_23-2148464654.jpg" class="img-fluid rounded-circle shadow" style="max-width: 200px;" alt="Logo">
+             <img src="/img/logo.png" class="img-fluid rounded-circle shadow" style="max-width: 200px;" alt="Logo">
           </div>
         </div>
 
