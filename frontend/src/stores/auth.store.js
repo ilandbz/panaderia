@@ -77,9 +77,9 @@ export const useAuthStore = defineStore('auth', {
             } catch (error) {
                 //console.error('Error logging out', error);
             } finally {
-                const router = useRouter();
+                //const router = useRouter();
                 this.clearAuth();
-                router.push('/login');
+                //router.push('/login');
             }
         },
 
