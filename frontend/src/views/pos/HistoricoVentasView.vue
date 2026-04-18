@@ -24,8 +24,8 @@ const { show: showClienteModal, hide: hideClienteModal } = useModal('clienteQuic
 
 const sunatConfig = ref(null);
 
-const fetchSunatConfig = async () => {
-    const response = await ventaStore.fetchSunatConfig();
+const //fetchSunatConfig = async () => {
+    const response = await ventaStore.//fetchSunatConfig();
     if (response && response.success) {
         sunatConfig.value = response.data;
     }
@@ -112,8 +112,8 @@ const anularVenta = async (venta) => {
 };
 
 const verMensajeSunat = (venta) => {
-  const mensaje = venta.comprobante.respuesta_sunat?.description 
-    ?? venta.comprobante.respuesta_sunat?.error 
+  const mensaje = venta.comprobante.respuesta_sunat?.description
+    ?? venta.comprobante.respuesta_sunat?.error
     ?? 'Sin detalle disponible';
 
   const isPerfilError = mensaje.toLowerCase().includes('perfil') || mensaje.toLowerCase().includes('policy');
@@ -174,21 +174,21 @@ const verMensajeSunat = (venta) => {
 
 const canReenviar = (venta) => {
   if (!venta.comprobante || venta.estado === 'anulada') return false;
-  
+
   const estado = venta.comprobante.estado_sunat;
   if (estado === 'pendiente') return true;
-  
+
   if (estado === 'rechazado') {
       const respuesta = venta.comprobante.respuesta_sunat;
       const mensaje = (
-          (respuesta?.description || '') + 
-          (respuesta?.error || '') + 
+          (respuesta?.description || '') +
+          (respuesta?.error || '') +
           (respuesta?.exception || '')
       ).toLowerCase();
-      
+
       return mensaje.includes('perfil') || mensaje.includes('policy');
   }
-  
+
   return false;
 };
 
@@ -225,7 +225,7 @@ const reenviarComprobante = async (venta) => {
 
 onMounted(() => {
   fetchVentas();
-  fetchSunatConfig();
+  //fetchSunatConfig();
 });
 
 watch(() => filters.value.search, () => {
@@ -249,7 +249,6 @@ watch(() => filters.value.search, () => {
       </div>
     </div>
 
-    <!-- Panel Temporal de Seguimiento SUNAT (Solicitado por el usuario) -->
     <div v-if="sunatConfig" class="alert bg-white border-0 shadow-sm rounded-4 mb-4 p-0 overflow-hidden">
       <div class="bg-primary text-white px-4 py-2 d-flex align-items-center justify-content-between">
         <span class="small fw-bold"><i class="fas fa-satellite-dish me-2"></i> PANEL DE SEGUIMIENTO SUNAT (TEMPORAL)</span>
@@ -369,17 +368,17 @@ watch(() => filters.value.search, () => {
               </td>
               <td class="text-center">
                 <template v-if="venta.comprobante">
-                    <span v-if="venta.comprobante.estado_sunat === 'aceptado'" 
+                    <span v-if="venta.comprobante.estado_sunat === 'aceptado'"
                           class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3"
                           title="Comprobante aceptado por SUNAT">
                       <i class="fas fa-check-circle me-1"></i> ACEPTADO
                     </span>
-                    <span v-else-if="venta.comprobante.estado_sunat === 'rechazado'" 
+                    <span v-else-if="venta.comprobante.estado_sunat === 'rechazado'"
                           class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 cursor-help"
                           :title="venta.comprobante.respuesta_sunat?.error || venta.comprobante.respuesta_sunat?.exception || 'Rechazado por SUNAT'">
                       <i class="fas fa-times-circle me-1"></i> RECHAZADO
                     </span>
-                    <span v-else 
+                    <span v-else
                           class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-3"
                           title="Pendiente de envío a SUNAT">
                       <i class="fas fa-clock me-1"></i> PENDIENTE
@@ -390,17 +389,17 @@ watch(() => filters.value.search, () => {
               <td class="text-center">
                 <template v-if="venta.comprobante">
                   <div class="d-flex align-items-center justify-content-center gap-2">
-                    
+
                     <!-- Texto recortado -->
                     <span class="text-muted small text-truncate-sunat" :title="venta.comprobante.respuesta_sunat?.description ?? venta.comprobante.respuesta_sunat?.error">
                       {{ truncate(
-                        venta.comprobante.respuesta_sunat?.description 
+                        venta.comprobante.respuesta_sunat?.description
                         ?? venta.comprobante.respuesta_sunat?.error
                       ) }}
                     </span>
 
                     <!-- Botón ver más -->
-                    <button 
+                    <button
                       v-if="(venta.comprobante.respuesta_sunat?.description ?? venta.comprobante.respuesta_sunat?.error)?.length > 60"
                       class="btn btn-sm btn-outline-secondary rounded-circle"
                       @click="verMensajeSunat(venta)"
@@ -449,7 +448,7 @@ watch(() => filters.value.search, () => {
           </tbody>
         </table>
       </div>
-      
+
       <!-- Pagination -->
       <div v-if="pagination.last_page > 1" class="card-footer bg-white border-0 p-4">
         <nav aria-label="Page navigation">
@@ -460,8 +459,8 @@ watch(() => filters.value.search, () => {
               </a>
             </li>
             <li v-for="p in pagination.last_page" :key="p" class="page-item" :class="{ active: p === pagination.current_page }">
-              <a class="page-link rounded-circle border-0 shadow-sm mx-1" 
-                 :class="p === pagination.current_page ? 'btn-primary' : 'bg-light text-dark'" 
+              <a class="page-link rounded-circle border-0 shadow-sm mx-1"
+                 :class="p === pagination.current_page ? 'btn-primary' : 'bg-light text-dark'"
                  href="#" @click.prevent="fetchVentas(p)">{{ p }}</a>
             </li>
             <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
@@ -474,9 +473,9 @@ watch(() => filters.value.search, () => {
       </div>
     </div>
 
-    <VentaResultadoModal 
-      :venta="selectedVenta || {}" 
-      :is-success="false" 
+    <VentaResultadoModal
+      :venta="selectedVenta || {}"
+      :is-success="false"
       @close="hideTicket"
       @comprobante-generado="onComprobanteGenerado"
       @nuevo-cliente="onNuevoCliente"
