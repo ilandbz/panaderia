@@ -25,7 +25,7 @@ class ProductoService
             });
         }
 
-        return $query->paginate($filtros['per_page'] ?? 100);
+        return $query->paginate($filtros['per_page'] ?? 15);
     }
 
     public function crear(array $data)

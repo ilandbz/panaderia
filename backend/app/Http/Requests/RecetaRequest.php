@@ -35,9 +35,26 @@ class RecetaRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'producto_id.required' => 'El producto es obligatorio.',
             'producto_id.exists' => 'El producto seleccionado debe ser de tipo "elaborado".',
-            'insumos.*.insumo_id.exists' => 'Uno o más insumos seleccionados no son válidos o no son de tipo "insumo".',
+
+            'nombre.required' => 'El nombre es obligatorio.',
+            'rendimiento.required' => 'El rendimiento es obligatorio.',
+            'rendimiento.numeric' => 'El rendimiento debe ser numérico.',
+            'rendimiento.min' => 'El rendimiento debe ser mayor a 0.',
+
             'insumos.required' => 'La receta debe tener al menos un insumo.',
+            'insumos.array' => 'El formato de insumos es inválido.',
+            'insumos.min' => 'Debe agregar al menos un insumo.',
+
+            'insumos.*.insumo_id.required' => 'El insumo es obligatorio.',
+            'insumos.*.insumo_id.exists' => 'Uno o más insumos no son válidos.',
+
+            'insumos.*.cantidad.required' => 'La cantidad es obligatoria.',
+            'insumos.*.cantidad.numeric' => 'La cantidad debe ser numérica.',
+            'insumos.*.cantidad.min' => 'La cantidad debe ser mayor a 0.',
+
+            'insumos.*.unidad_medida.required' => 'La unidad de medida es obligatoria.',
         ];
     }
 }

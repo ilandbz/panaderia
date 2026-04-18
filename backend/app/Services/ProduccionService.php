@@ -37,7 +37,7 @@ class ProduccionService
                 MovimientoInventario::create([
                     'producto_id' => $insumo->id,
                     'usuario_id'  => Auth::id(),
-                    'tipo'        => 'salida',
+                    'tipo'        => 'egreso',
                     'cantidad'    => $cantidadNecesaria,
                     'stock_anterior' => $stockAnterior,
                     'stock_nuevo'    => $insumo->stock,
