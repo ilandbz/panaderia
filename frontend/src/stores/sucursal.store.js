@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import axios from 'axios';
+import api from '@/services/api.service';
 
 export const useSucursalStore = defineStore('sucursal', () => {
     const sucursales = ref([]);
@@ -12,11 +12,11 @@ export const useSucursalStore = defineStore('sucursal', () => {
     async function fetchSucursales() {
         loading.value = true;
         try {
-            const response = await axios.get('/api/sucursales');
-            if (response.data && response.data.data) {
-                sucursales.value = response.data.data;
+            const response = await api.get('/sucursales');
+            if (response.data) {
+                sucursales.value = response.data;
             } else {
-                console.warn('Respuesta de sucursales no válida:', response.data);
+                console.warn('Respuesta de sucursales no válida:', response);
                 sucursales.value = [];
             }
         } catch (error) {
@@ -30,9 +30,9 @@ export const useSucursalStore = defineStore('sucursal', () => {
     async function saveSucursal(data) {
         loading.value = true;
         try {
-            const response = await axios.post('/api/sucursales', data);
+            const response = await api.post('/sucursales', data);
             await fetchSucursales();
-            return response.data;
+            return response;
         } catch (error) {
             console.error('Error saving sucursal:', error);
             throw error;
@@ -44,12 +44,12 @@ export const useSucursalStore = defineStore('sucursal', () => {
     async function updateSucursal(id, data) {
         loading.value = true;
         try {
-            const response = await axios.put(`/api/sucursales/${id}`, data);
+            const response = await api.put(`/sucursales/${id}`, data);
             await fetchSucursales();
             if (sucursalActual.value && sucursalActual.value.id === id) {
-                setSucursal(response.data.data);
+                setSucursal(response.data);
             }
-            return response.data;
+            return response;
         } catch (error) {
             console.error('Error updating sucursal:', error);
             throw error;
@@ -62,23 +62,23 @@ export const useSucursalStore = defineStore('sucursal', () => {
         sucursalActual.value = sucursal;
         localStorage.setItem('sucursal_actual', JSON.stringify(sucursal));
         
-        // Configurar el header global de Axios
+        // Configurar el header global para todos los servicios que usen el api service
         if (sucursal) {
-            axios.defaults.headers.common['X-Sucursal-Id'] = sucursal.id;
+            api.defaults.headers.common['X-Sucursal-Id'] = sucursal.id;
         } else {
-            delete axios.defaults.headers.common['X-Sucursal-Id'];
+            delete api.defaults.headers.common['X-Sucursal-Id'];
         }
     }
 
     function clearSucursal() {
         sucursalActual.value = null;
         localStorage.removeItem('sucursal_actual');
-        delete axios.defaults.headers.common['X-Sucursal-Id'];
+        delete api.defaults.headers.common['X-Sucursal-Id'];
     }
 
     // Inicializar el header si ya hay una sucursal en localStorage
     if (sucursalActual.value) {
-        axios.defaults.headers.common['X-Sucursal-Id'] = sucursalActual.value.id;
+        api.defaults.headers.common['X-Sucursal-Id'] = sucursalActual.value.id;
     }
 
     return {
