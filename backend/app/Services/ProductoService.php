@@ -47,12 +47,16 @@ class ProductoService
         return DB::transaction(function () use ($data) {
             $sucursal_id = $data['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
             
-            $producto = Producto::create($data);
-            
-            // Si inicia con stock, registrar en la sucursal activa
+            // Extraer datos de stock para la tabla pivot
             $stockInicial = $data['stock'] ?? 0;
             $stockMinimo = $data['stock_minimo'] ?? 0;
 
+            // Limpiar data para la tabla base 'productos'
+            unset($data['stock'], $data['stock_minimo'], $data['sucursal_id']);
+
+            $producto = Producto::create($data);
+            
+            // Registrar en la sucursal activa
             $producto->sucursales()->attach($sucursal_id, [
                 'stock' => $stockInicial,
                 'stock_minimo' => $stockMinimo
@@ -110,6 +114,20 @@ class ProductoService
     public function actualizar(Producto $producto, array $data)
     {
         return DB::transaction(function () use ($producto, $data) {
+            $sucursal_id = config('app.sucursal_id') ?? auth()->user()->sucursal_id;
+
+            // Si viene stock_minimo, actualizarlo en la tabla pivot
+            if (isset($data['stock_minimo'])) {
+                $stockMinimo = $data['stock_minimo'];
+                $producto->sucursales()->syncWithoutDetaching([
+                    $sucursal_id => ['stock_minimo' => $stockMinimo]
+                ]);
+                unset($data['stock_minimo']);
+            }
+
+            // Eliminar otros campos que no pertenecen a la tabla productos
+            unset($data['stock'], $data['sucursal_id']);
+
             $producto->update($data);
             return $producto;
         });

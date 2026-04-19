@@ -163,6 +163,35 @@ const addToCart = (product) => {
   }
 };
 
+const addToCartByAmount = (product, amount) => {
+  if (!cajaStore.isCajaAbierta) {
+    Swal.fire('Atención', 'Debe abrir caja para realizar ventas', 'warning');
+    return;
+  }
+  
+  // Calcular cantidad basada en monto de soles redondeando hacia abajo
+  const qty = Math.floor(amount / product.precio_venta);
+  
+  if (qty <= 0) {
+    Swal.fire('Atención', `El monto S/ ${amount} es insuficiente para comprar ${product.nombre} (Precio: S/ ${product.precio_venta})`, 'info');
+    return;
+  }
+
+  const existing = cart.value.find(item => item.id === product.id);
+  const currentTotalQty = (existing ? existing.cantidad : 0) + qty;
+
+  if (product.stock < currentTotalQty) {
+    Swal.fire('Sin Stock', `Solo hay ${product.stock} unidades de ${product.nombre} disponibles`, 'error');
+    return;
+  }
+
+  if (existing) {
+    existing.cantidad += qty;
+  } else {
+    cart.value.push({ ...product, cantidad: qty });
+  }
+};
+
 const updateQuantity = (id, newQty) => {
   const item = cart.value.find(i => i.id === id);
   if (!item) return;
@@ -310,6 +339,18 @@ const nuevaVenta = () => {
                     <div class="small fw-bold text-truncate text-dark mb-1">{{ product.nombre }}</div>
                     <div class="text-primary fw-bold fs-5">S/ {{ product.precio_venta }}</div>
                     <div class="extrasmall text-muted mt-1">Stock: <span :class="product.stock < 10 ? 'text-danger fw-bold' : ''">{{ product.stock }}</span></div>
+
+                    <!-- Botones rápidos por monto (Soles) -->
+                    <div v-if="product.categoria.nombre === 'Panadería'" 
+                         class="d-flex justify-content-center gap-1 mt-2 pt-2 border-top" 
+                         @click.stop>
+                        <button v-for="amount in [1, 2, 5]" :key="amount" 
+                                @click="addToCartByAmount(product, amount)"
+                                class="btn btn-xs btn-outline-primary py-1 px-1 rounded-3 flex-grow-1" 
+                                style="font-size: 0.65rem; border-style: dashed;">
+                            S/ {{ amount }}
+                        </button>
+                    </div>
                   </div>
                 </div>
               </div>
