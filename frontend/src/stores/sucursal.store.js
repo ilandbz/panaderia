@@ -13,9 +13,15 @@ export const useSucursalStore = defineStore('sucursal', () => {
         loading.value = true;
         try {
             const response = await axios.get('/api/sucursales');
-            sucursales.value = response.data.data;
+            if (response.data && response.data.data) {
+                sucursales.value = response.data.data;
+            } else {
+                console.warn('Respuesta de sucursales no válida:', response.data);
+                sucursales.value = [];
+            }
         } catch (error) {
             console.error('Error fetching sucursales:', error);
+            sucursales.value = [];
         } finally {
             loading.value = false;
         }
