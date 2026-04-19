@@ -147,16 +147,40 @@ const addToCart = (product) => {
     Swal.fire('Atención', 'Debe abrir caja para realizar ventas', 'warning');
     return;
   }
-  if (product.stock <= 0) {
-    Swal.fire('Sin Stock', 'No hay unidades de ' + product.nombre, 'error');
+  
+  const existing = cart.value.find(item => item.id === product.id);
+  const currentQty = existing ? existing.cantidad : 0;
+
+  if (product.stock <= currentQty) {
+    Swal.fire('Sin Stock', `No hay suficientes unidades de ${product.nombre} (Disponibles: ${product.stock})`, 'error');
     return;
   }
-  const existing = cart.value.find(item => item.id === product.id);
+
   if (existing) {
     existing.cantidad++;
   } else {
     cart.value.push({ ...product, cantidad: 1 });
   }
+};
+
+const updateQuantity = (id, newQty) => {
+  const item = cart.value.find(i => i.id === id);
+  if (!item) return;
+
+  const qty = parseFloat(newQty);
+
+  if (isNaN(qty) || qty < 1) {
+    item.cantidad = 1;
+    return;
+  }
+
+  if (qty > item.stock) {
+    Swal.fire('Stock Insuficiente', `Solo hay ${item.stock} unidades de ${item.nombre}`, 'warning');
+    item.cantidad = item.stock;
+    return;
+  }
+
+  item.cantidad = qty;
 };
 
 const removeFromCart = (id) => {
@@ -334,8 +358,21 @@ const nuevaVenta = () => {
             <div v-for="item in cart" :key="item.id" class="cart-item mb-4 d-flex align-items-center justify-content-between animate__animated animate__fadeIn">
               <div class="flex-grow-1">
                 <div class="small fw-bold text-dark text-truncate mb-1" style="max-width: 180px;">{{ item.nombre }}</div>
-                <div class="extrasmall text-muted">
-                  <span class="badge bg-light text-dark px-2 border">{{ item.cantidad }}</span> x S/ {{ item.precio_venta }}
+                <div class="extrasmall text-muted d-flex align-items-center mt-2">
+                  <div class="input-group input-group-sm border rounded-pill overflow-hidden shadow-sm me-2" style="width: 130px;">
+                    <button class="btn btn-light btn-sm border-0 px-2" @click="updateQuantity(item.id, item.cantidad - 1)" :disabled="item.cantidad <= 1">
+                      <i class="fas fa-minus extrasmall"></i>
+                    </button>
+                    <input type="number" 
+                           :value="item.cantidad" 
+                           @change="e => updateQuantity(item.id, e.target.value)"
+                           class="form-control form-control-sm border-0 text-center p-0 bg-transparent fw-bold" 
+                           style="font-size: 0.75rem;">
+                    <button class="btn btn-light btn-sm border-0 px-2" @click="updateQuantity(item.id, item.cantidad + 1)">
+                      <i class="fas fa-plus extrasmall"></i>
+                    </button>
+                  </div>
+                  <span class="ms-2">x S/ {{ item.precio_venta }}</span>
                 </div>
               </div>
               <div class="d-flex align-items-center text-end ms-2">

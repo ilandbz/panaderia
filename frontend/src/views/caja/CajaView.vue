@@ -66,23 +66,24 @@
         <!-- Right: Summary & Movements -->
         <div class="col-lg-8">
            <div class="card border-0 rounded-4 shadow-lg p-4 mb-4 bg-primary text-white overflow-hidden position-relative shadow-primary">
-              <div class="position-absolute top-0 end-0 p-5 opacity-10" style="transform: translate(30%, -30%)">
-                 <i class="fas fa-cash-register fa-10x"></i>
+              <!-- Background Icon: pointer-events: none and true low opacity -->
+              <div class="position-absolute top-0 end-0 opacity-25" style="transform: translate(25%, -25%); pointer-events: none; z-index: 0; opacity: 0.15 !important;">
+                 <i class="fas fa-cash-register fa-8x"></i>
               </div>
 
-              <div class="row align-items-center position-relative">
-                <div class="col-md-6 border-end border-white border-opacity-25 py-2">
+              <div class="row align-items-center position-relative" style="z-index: 1;">
+                <div class="col-md-12 col-xl-6 border-end-xl border-white border-opacity-25 py-2 mb-3 mb-xl-0">
                    <div class="small opacity-75 fw-bold text-uppercase tracking-wider">TOTAL EN CAJA (SISTEMA)</div>
-                   <div class="display-4 fw-bold">S/ {{ formatMoney(totalSistema) }}</div>
+                   <div class="display-5 display-md-4 fw-bold">S/ {{ formatMoney(totalSistema) }}</div>
                    <div class="small opacity-50">Inició con S/ {{ formatMoney(apertura?.monto_apertura || 0) }}</div>
                 </div>
-                <div class="col-md-6 ps-md-4 py-2">
-                   <div class="row">
-                     <div class="col-6 mb-2">
+                <div class="col-md-12 col-xl-6 ps-xl-4 py-2">
+                   <div class="row g-2">
+                     <div class="col-6 col-sm-6 mb-2">
                         <div class="small opacity-75 fw-bold text-uppercase">Ingresos</div>
                         <div class="h4 fw-bold mb-0 text-white-50">+ S/ {{ formatMoney(totalIngresos) }}</div>
                      </div>
-                     <div class="col-6 mb-2">
+                     <div class="col-6 col-sm-6 mb-2">
                           <div class="small opacity-75 fw-bold text-uppercase">Salidas</div>
                           <div class="h4 fw-bold mb-0 text-danger-subtle">- S/ {{ formatMoney(totalSalidas) }}</div>
                        </div>
@@ -423,7 +424,6 @@ const handleManualMovement = async (tipo) => {
   }
 };
 </script>
-
 <style scoped>
 .text-brown { color: #4b2c20; }
 .bg-primary { background-color: #d97706 !important; border-color: #d97706 !important; }
@@ -447,19 +447,10 @@ const handleManualMovement = async (tipo) => {
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 10px; }
 .shadow-lg { box-shadow: 0 1rem 3rem rgba(0,0,0,.075)!important; }
 .italic { font-style: italic; }
+
+@media (min-width: 1200px) {
+  .border-end-xl {
+    border-right: 1px solid rgba(255, 255, 255, 0.25) !important;
+  }
+}
 </style>
-
-<style scoped>
-.text-brown { color: #4b2c20; }
-.bg-primary { background-color: #d97706 !important; border-color: #d97706 !important; }
-.shadow-primary { box-shadow: 0 15px 30px rgba(217, 119, 6, 0.2) !important; }
-.tracking-wider { letter-spacing: 0.05em; }
-.tracking-widest { letter-spacing: 0.15em; }
-.transition-hover:hover { background-color: #fff9f0; transform: scale(1.002); }
-.extrasmall { font-size: 0.7rem; }
-
-.custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 10px; }
-
-.shadow-lg { box-shadow: 0 1rem 3rem rgba(0,0,0,.075)!important; }
-</style>ript>

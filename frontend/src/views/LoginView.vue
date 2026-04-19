@@ -5,10 +5,10 @@
         <!-- Brand/Image Section -->
         <div class="col-lg-6 d-none d-lg-block bg-primary p-5 text-white d-flex flex-column justify-content-center text-center">
           <i class="fas fa-wheat-awn fs-1 mb-4"></i>
-          <h2 class="display-6 fw-bold">Panadería Jara</h2>
+          <h2 class="display-6 fw-bold">Panadería & Pasteleria</h2>
           <p class="lead opacity-75">Sistema Integral de Gestión de Ventas e Inventario</p>
           <div class="mt-4">
-             <img src="/img/logo.png" class="img-fluid rounded-circle shadow" style="max-width: 200px;" alt="Logo">
+             <img src="/img/logo.png" class="img-fluid rounded-3" style="max-width: 300px;" alt="Logo">
           </div>
         </div>
 
