@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\ReporteController;
 use App\Http\Controllers\Api\RecetaController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\SucursalController;
 
 // Auth
 Route::post('/login', [AuthController::class, 'login']);
@@ -88,4 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('roles', RoleController::class)->except(['show']);
     Route::get('/permissions', [RoleController::class, 'permissions']);
+
+    // Sucursales
+    Route::get('/sucursales', [SucursalController::class, 'index']);
 });

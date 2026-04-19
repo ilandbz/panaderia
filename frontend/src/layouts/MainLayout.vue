@@ -76,9 +76,12 @@
     <!-- Main Content -->
     <main class="flex-grow-1 d-flex flex-column vh-100 overflow-hidden">
       <!-- Navbar -->
-      <header class="navbar bg-white shadow-sm px-4 py-2 border-bottom no-print">
         <div class="d-flex align-items-center">
-          <span class="text-muted fw-bold">Sistema de Gestión</span>
+          <i class="fas fa-store text-orange me-2"></i>
+          <span class="text-orange fw-bold me-2">{{ sucursalActual?.nombre }}</span>
+          <router-link to="/sucursal/seleccion" class="btn btn-link btn-sm text-muted p-0 text-decoration-none" title="Cambiar Sede">
+            <i class="fas fa-exchange-alt"></i>
+          </router-link>
         </div>
         <div class="user-profile d-flex align-items-center">
           <div class="text-end me-3">
@@ -103,13 +106,16 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth.store';
+import { useSucursalStore } from '@/stores/sucursal.store';
 import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
+const sucursalStore = useSucursalStore();
 const router = useRouter();
 const isCollapsed = ref(false);
 
 const user = computed(() => authStore.user);
+const sucursalActual = computed(() => sucursalStore.sucursalActual);
 
 const handleLogout = async () => {
   await authStore.logout();
@@ -152,6 +158,10 @@ const handleLogout = async () => {
 .nav-item:hover, .nav-item.router-link-exact-active {
   background-color: #d97706;
   color: white;
+}
+
+.text-orange {
+  color: #d97706;
 }
 
 .content-area {

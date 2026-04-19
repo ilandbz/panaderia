@@ -12,6 +12,8 @@ class CompraService
     public function registrar(array $data)
     {
         return DB::transaction(function () use ($data) {
+            $sucursal_id = $data['sucursal_id'] ?? Auth::user()->sucursal_id;
+
             $ultimoId = Compra::withTrashed()->max('id') ?? 0;
             $numeroCompra = 'COMP-' . str_pad($ultimoId + 1, 6, '0', STR_PAD_LEFT);
 
@@ -19,6 +21,7 @@ class CompraService
                 'numero_compra'       => $numeroCompra,
                 'proveedor_id'        => $data['proveedor_id'],
                 'usuario_id'          => Auth::id(),
+                'sucursal_id'         => $sucursal_id,
                 'tipo_comprobante'    => $data['tipo_comprobante'],
                 'numero_comprobante'  => $data['numero_comprobante'],
                 'fecha_compra'        => $data['fecha_compra'],
@@ -37,18 +40,25 @@ class CompraService
                 ]);
 
                 $producto = \App\Models\Producto::find($item['producto_id']);
-                $stockAnterior = $producto->stock;
-                $producto->increment('stock', $item['cantidad']);
-                $producto->refresh();
+                
+                // Obtener o crear registro de stock para esta sucursal
+                $pivot = $producto->sucursales()->where('sucursal_id', $sucursal_id)->first();
+                $stockAnterior = $pivot ? $pivot->pivot->stock : 0;
+
+                // Actualizar o insertar en producto_sucursal
+                $producto->sucursales()->syncWithoutDetaching([
+                    $sucursal_id => ['stock' => $stockAnterior + $item['cantidad']]
+                ]);
 
                 MovimientoInventario::create([
                     'producto_id'     => $producto->id,
                     'usuario_id'      => Auth::id(),
+                    'sucursal_id'     => $sucursal_id,
                     'compra_id'       => $compra->id,
                     'tipo'            => 'ingreso',
                     'cantidad'        => $item['cantidad'],
                     'stock_anterior'  => $stockAnterior,
-                    'stock_nuevo'     => $producto->stock,
+                    'stock_nuevo'     => $stockAnterior + $item['cantidad'],
                     'motivo'          => 'compra',
                     'observacion'     => "Compra registrada: {$compra->numero_compra}",
                 ]);
@@ -69,8 +79,15 @@ class CompraService
 
             foreach ($compra->detalles as $detalle) {
                 $producto = $detalle->producto;
-                // Al anular una compra, restamos la cantidad que se ingresó
-                $producto->decrement('stock', $detalle->cantidad);
+                $sucursal_id = $compra->sucursal_id;
+
+                // Obtener stock actual de la sucursal
+                $pivot = $producto->sucursales()->where('sucursal_id', $sucursal_id)->first();
+                if ($pivot) {
+                    $producto->sucursales()->updateExistingPivot($sucursal_id, [
+                        'stock' => $pivot->pivot->stock - $detalle->cantidad
+                    ]);
+                }
             }
 
             // Según requerimiento del usuario: "elimine ese movimiento del kardex"

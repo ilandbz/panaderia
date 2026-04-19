@@ -25,7 +25,13 @@ class User extends Authenticatable
         'dni',
         'telefono',
         'activo',
+        'sucursal_id',
     ];
+
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class);
+    }
 
     protected $hidden = [
         'password',

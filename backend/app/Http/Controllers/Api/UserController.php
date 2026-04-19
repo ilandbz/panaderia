@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function index(): JsonResponse
     {
-        $users = User::with('roles')->get();
+        $users = User::with(['roles', 'sucursal'])->get();
         return $this->successResponse($users, 'Usuarios recuperados');
     }
 
@@ -27,23 +27,25 @@ class UserController extends Controller
             'dni'      => 'nullable|string|max:15',
             'telefono' => 'nullable|string|max:20',
             'rol'      => 'required|string|exists:roles,name',
-            'role_id'  => 'nullable|integer|exists:roles,id', // Por compatibilidad con tabla usuarios
+            'role_id'  => 'nullable|integer|exists:roles,id',
+            'sucursal_id' => 'required|integer|exists:sucursales,id',
         ]);
 
         $user = User::create([
-            'nombre'   => $validated['nombre'],
-            'apellido' => $validated['apellido'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'dni'      => $validated['dni'],
-            'telefono' => $validated['telefono'],
-            'role_id'  => $validated['role_id'] ?? null,
-            'activo'   => true,
+            'nombre'      => $validated['nombre'],
+            'apellido'    => $validated['apellido'],
+            'email'       => $validated['email'],
+            'password'    => Hash::make($validated['password']),
+            'dni'         => $validated['dni'],
+            'telefono'    => $validated['telefono'],
+            'role_id'     => $validated['role_id'] ?? null,
+            'sucursal_id' => $validated['sucursal_id'],
+            'activo'      => true,
         ]);
 
         $user->assignRole($validated['rol']);
 
-        return $this->successResponse($user->load('roles'), 'Usuario creado', 201);
+        return $this->successResponse($user->load(['roles', 'sucursal']), 'Usuario creado', 201);
     }
 
     public function update(Request $request, User $user): JsonResponse
@@ -55,17 +57,19 @@ class UserController extends Controller
             'password' => 'nullable|string|min:6',
             'dni'      => 'nullable|string|max:15',
             'telefono' => 'nullable|string|max:20',
-            'rol'      => 'required|string|exists:roles,name',
-            'role_id'  => 'nullable|integer|exists:roles,id',
+            'rol'         => 'required|string|exists:roles,name',
+            'role_id'     => 'nullable|integer|exists:roles,id',
+            'sucursal_id' => 'required|integer|exists:sucursales,id',
         ]);
 
         $data = [
-            'nombre'   => $validated['nombre'],
-            'apellido' => $validated['apellido'],
-            'email'    => $validated['email'],
-            'dni'      => $validated['dni'],
-            'telefono' => $validated['telefono'],
-            'role_id'  => $validated['role_id'] ?? $user->role_id,
+            'nombre'      => $validated['nombre'],
+            'apellido'    => $validated['apellido'],
+            'email'       => $validated['email'],
+            'dni'         => $validated['dni'],
+            'telefono'    => $validated['telefono'],
+            'role_id'     => $validated['role_id'] ?? $user->role_id,
+            'sucursal_id' => $validated['sucursal_id'],
         ];
 
         if (!empty($validated['password'])) {
@@ -75,7 +79,7 @@ class UserController extends Controller
         $user->update($data);
         $user->syncRoles([$validated['rol']]);
 
-        return $this->successResponse($user->load('roles'), 'Usuario actualizado');
+        return $this->successResponse($user->load(['roles', 'sucursal']), 'Usuario actualizado');
     }
 
     public function toggleStatus(User $usuario): JsonResponse

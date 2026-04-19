@@ -17,6 +17,7 @@ class AperturaCaja extends Model
     protected $fillable = [
         'usuario_id',
         'cerrado_por',
+        'sucursal_id',
         'monto_apertura',
         'monto_cierre',
         'monto_sistema',
@@ -26,6 +27,11 @@ class AperturaCaja extends Model
         'fecha_apertura',
         'fecha_cierre',
     ];
+
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class);
+    }
 
     protected $casts = [
         'monto_apertura' => 'decimal:2',

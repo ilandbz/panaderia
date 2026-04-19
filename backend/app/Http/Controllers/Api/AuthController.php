@@ -32,7 +32,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->successResponse([
-            'user'         => $user->load('roles', 'permissions'),
+            'user'         => $user->load('roles', 'permissions', 'sucursal'),
             'access_token' => $token,
             'token_type'   => 'Bearer',
         ], 'Login exitoso');
@@ -47,6 +47,6 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return $this->successResponse($request->user()->load('roles', 'permissions'));
+        return $this->successResponse($request->user()->load('roles', 'permissions', 'sucursal'));
     }
 }

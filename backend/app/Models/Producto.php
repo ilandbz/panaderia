@@ -31,6 +31,13 @@ class Producto extends Model
         'igv_porcentaje',
     ];
 
+    public function sucursales()
+    {
+        return $this->belongsToMany(Sucursal::class, 'producto_sucursal')
+                    ->withPivot('stock', 'stock_minimo')
+                    ->withTimestamps();
+    }
+
     protected $casts = [
         'precio_venta' => 'decimal:2',
         'costo' => 'decimal:2',

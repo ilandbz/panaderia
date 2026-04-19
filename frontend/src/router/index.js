@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
+import { useSucursalStore } from '@/stores/sucursal.store';
 
 const routes = [
     {
@@ -7,6 +8,12 @@ const routes = [
         name: 'Login',
         component: () => import('@/views/LoginView.vue'),
         meta: { guest: true }
+    },
+    {
+        path: '/sucursal/seleccion',
+        name: 'SeleccionSucursal',
+        component: () => import('@/views/configuracion/SucursalSelectionView.vue'),
+        meta: { auth: true }
     },
     {
         path: '/',
@@ -93,9 +100,15 @@ const router = createRouter({
 
 router.beforeEach((to) => {
     const authStore = useAuthStore();
+    const sucursalStore = useSucursalStore();
 
     if (to.meta.auth && !authStore.isLoggedIn) {
         return { name: 'Login' };
+    }
+
+    // Forzar selección de sucursal
+    if (authStore.isLoggedIn && !sucursalStore.hasSucursal && to.name !== 'SeleccionSucursal' && to.name !== 'Login') {
+        return { name: 'SeleccionSucursal' };
     }
 
     if (to.meta.guest && authStore.isLoggedIn) {

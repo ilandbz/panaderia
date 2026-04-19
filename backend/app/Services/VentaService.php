@@ -27,12 +27,15 @@ class VentaService
             $this->validarReglasSunat($data);
 
             // 1. Validar apertura de caja
+            $sucursal_id = $data['sucursal_id'] ?? auth()->user()->sucursal_id;
+            
             $apertura = AperturaCaja::where('estado', 'abierta')
                 ->where('usuario_id', $data['usuario_id'])
+                ->where('sucursal_id', $sucursal_id)
                 ->first();
 
             if (!$apertura) {
-                throw new \Exception('No hay una caja abierta para este usuario.');
+                throw new \Exception('No hay una caja abierta para este usuario en esta sucursal.');
             }
 
             // 2. Crear Venta
@@ -41,6 +44,7 @@ class VentaService
                 'usuario_id'       => $data['usuario_id'],
                 'cliente_id'       => $data['cliente_id'] ?? null,
                 'apertura_caja_id' => $apertura->id,
+                'sucursal_id'      => $sucursal_id,
                 'subtotal'         => $data['subtotal'],
                 'igv'              => $data['igv'] ?? 0,
                 'descuento'        => $data['descuento'] ?? 0,
@@ -60,11 +64,15 @@ class VentaService
                     throw new \Exception("Producto no encontrado ID: {$item['producto_id']}");
                 }
 
-                if ($producto->stock < $item['cantidad']) {
-                    throw new \Exception("Stock insuficiente para: {$producto->nombre}");
+                // Obtener stock en la sucursal específica
+                $pivot = $producto->sucursales()->where('sucursal_id', $sucursal_id)->first();
+                $stockActual = $pivot ? $pivot->pivot->stock : 0;
+
+                if ($stockActual < $item['cantidad']) {
+                    throw new \Exception("Stock insuficiente en esta sede para: {$producto->nombre}");
                 }
 
-                $stockAnterior = $producto->stock;
+                $stockAnterior = $stockActual;
 
                 DetalleVenta::create([
                     'venta_id'        => $venta->id,
@@ -75,20 +83,23 @@ class VentaService
                     'subtotal'        => $item['subtotal'],
                 ]);
 
-                // Descontar Stock
-                $producto->decrement('stock', $item['cantidad']);
+                // Descontar Stock en la tabla pivot
+                $producto->sucursales()->updateExistingPivot($sucursal_id, [
+                    'stock' => $stockActual - $item['cantidad']
+                ]);
 
                 // Registrar Movimiento de Inventario (Kardex)
                 MovimientoInventario::create([
                     'producto_id'    => $producto->id,
                     'usuario_id'     => $data['usuario_id'],
+                    'sucursal_id'    => $sucursal_id,
                     'venta_id'       => $venta->id,
                     'tipo'           => 'egreso',
                     'cantidad'       => $item['cantidad'],
                     'stock_anterior' => $stockAnterior,
                     'stock_nuevo'    => $stockAnterior - $item['cantidad'],
                     'motivo'         => 'venta',
-                    'observacion'    => "Venta {$venta->numero_venta}",
+                    'observacion'    => "Venta {$venta->numero_venta} - Sede: " . ($venta->sucursal->nombre ?? 'N/A'),
                 ]);
             }
 

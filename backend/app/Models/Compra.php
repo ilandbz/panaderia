@@ -17,6 +17,7 @@ class Compra extends Model
         'numero_compra',
         'proveedor_id',
         'usuario_id',
+        'sucursal_id',
         'tipo_comprobante',
         'numero_comprobante',
         'subtotal',
@@ -26,6 +27,11 @@ class Compra extends Model
         'fecha_compra',
         'observacion',
     ];
+
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class);
+    }
 
     protected $casts = [
         'subtotal' => 'decimal:2',

@@ -10,17 +10,21 @@ class CajaService
 {
     public function abrir(array $data)
     {
-        // Verificar si ya tiene una caja abierta
+        $sucursal_id = $data['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
+
+        // Verificar si ya tiene una caja abierta en ESTA sucursal
         $abierta = AperturaCaja::where('usuario_id', $data['usuario_id'])
+                                ->where('sucursal_id', $sucursal_id)
                                 ->where('estado', 'abierta')
                                 ->exists();
         
         if ($abierta) {
-            throw new \Exception('Ya tienes una caja abierta.');
+            throw new \Exception('Ya tienes una caja abierta en esta sucursal.');
         }
 
         return AperturaCaja::create([
             'usuario_id'     => $data['usuario_id'],
+            'sucursal_id'    => $sucursal_id,
             'monto_apertura' => $data['monto_apertura'],
             'estado'         => 'abierta',
             'fecha_apertura' => now(),
@@ -52,8 +56,11 @@ class CajaService
 
     public function registrarGasto(array $data)
     {
+        $sucursal_id = $data['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
+
         $apertura = AperturaCaja::where('estado', 'abierta')
                                 ->where('usuario_id', $data['usuario_id'])
+                                ->where('sucursal_id', $sucursal_id)
                                 ->first();
 
         if (!$apertura) {
@@ -73,8 +80,11 @@ class CajaService
 
     public function registrarIngreso(array $data)
     {
+        $sucursal_id = $data['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
+
         $apertura = AperturaCaja::where('estado', 'abierta')
                                 ->where('usuario_id', $data['usuario_id'])
+                                ->where('sucursal_id', $sucursal_id)
                                 ->first();
 
         if (!$apertura) {

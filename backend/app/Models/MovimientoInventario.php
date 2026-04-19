@@ -16,6 +16,7 @@ class MovimientoInventario extends Model
     protected $fillable = [
         'producto_id',
         'usuario_id',
+        'sucursal_id',
         'venta_id',
         'compra_id',
         'tipo',
@@ -25,6 +26,11 @@ class MovimientoInventario extends Model
         'motivo',
         'observacion',
     ];
+
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class);
+    }
 
     protected $casts = [
         'cantidad' => 'decimal:3',

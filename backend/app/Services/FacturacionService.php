@@ -31,7 +31,17 @@ class FacturacionService
 
     public function generar(Venta $venta)
     {
-        $serie = ($venta->tipo_comprobante === 'factura') ? 'F001' : 'BA01';
+        $venta->load('sucursal');
+        $sucursal = $venta->sucursal;
+
+        if (!$sucursal) {
+            throw new Exception('La venta no tiene una sucursal asignada.');
+        }
+
+        $serie = ($venta->tipo_comprobante === 'factura') 
+            ? ($sucursal->serie_factura ?? 'F001') 
+            : ($sucursal->serie_boleta ?? 'B001');
+
         $ultimo = Comprobante::where('serie', $serie)->max('correlativo') ?? 0;
         $correlativo = $ultimo + 1;
 
@@ -88,8 +98,12 @@ class FacturacionService
 
     public function generarNotaCredito(Venta $venta, string $motivo)
     {
+        $venta->load(['sucursal', 'comprobante']);
+        $sucursal = $venta->sucursal;
         $serieOrig = $venta->comprobante->serie;
-        $serieNC = (str_starts_with($serieOrig, 'F')) ? 'FC01' : 'BC01';
+        
+        // Serie NC según sucursal o fallback
+        $serieNC = $sucursal->serie_nota_credito ?? ((str_starts_with($serieOrig, 'F')) ? 'FC01' : 'BC01');
 
         $ultimo = Comprobante::where('serie', $serieNC)->max('correlativo') ?? 0;
         $correlativo = $ultimo + 1;
@@ -234,7 +248,7 @@ class FacturacionService
             ->setCorrelativo($comprobante->correlativo)
             ->setFechaEmision(new \DateTime())
             ->setTipoMoneda('PEN')
-            ->setCompany($this->getCompany())
+            ->setCompany($this->getCompany($venta))
             ->setClient($this->getClient($venta))
             ->setFormaPago(new FormaPagoContado()); // Obligatorio para Facturas (error 3244 si falta)
 
@@ -325,7 +339,7 @@ class FacturacionService
             ->setCorrelativo($comprobanteNC->correlativo)
             ->setFechaEmision(new \DateTime())
             ->setTipoMoneda('PEN')
-            ->setCompany($this->getCompany())
+            ->setCompany($this->getCompany($venta))
             ->setClient($this->getClient($venta))
             ->setTipDocAfectado($venta->tipo_comprobante === 'factura' ? '01' : '03')
             ->setNumDocfectado($venta->comprobante->numero_comprobante)
@@ -407,19 +421,32 @@ class FacturacionService
         return $note;
     }
 
-    private function getCompany(): Company
+    private function getCompany(Venta $venta = null): Company
     {
         $config = config('facturacion');
         $company = new Company();
         $company->setRuc($config['ruc'])
             ->setRazonSocial($config['razon_social'])
-            ->setNombreComercial($config['razon_social'])
-            ->setAddress((new Address())
-                ->setUbigueo('100101')
+            ->setNombreComercial($config['razon_social']);
+        
+        $address = new Address();
+        
+        if ($venta && $venta->sucursal) {
+            $sucursal = $venta->sucursal;
+            $address->setUbigueo($sucursal->ubigueo ?? '100101')
                 ->setDepartamento('HUANUCO')
                 ->setProvincia('HUANUCO')
                 ->setDistrito('HUANUCO')
-                ->setDireccion($config['direccion']));
+                ->setDireccion($sucursal->direccion ?? $config['direccion']);
+        } else {
+            $address->setUbigueo('100101')
+                ->setDepartamento('HUANUCO')
+                ->setProvincia('HUANUCO')
+                ->setDistrito('HUANUCO')
+                ->setDireccion($config['direccion']);
+        }
+
+        $company->setAddress($address);
 
         return $company;
     }

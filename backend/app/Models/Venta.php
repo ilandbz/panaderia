@@ -18,6 +18,7 @@ class Venta extends Model
         'usuario_id',
         'cliente_id',
         'apertura_caja_id',
+        'sucursal_id',
         'subtotal',
         'igv',
         'descuento',
@@ -29,6 +30,11 @@ class Venta extends Model
         'tipo_comprobante',
         'observacion',
     ];
+
+    public function sucursal(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class);
+    }
 
     protected $casts = [
         'subtotal' => 'decimal:2',
