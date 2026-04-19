@@ -84,6 +84,12 @@ const routes = [
                 meta: { auth: true, permission: 'ver configuracion' }
             },
             {
+                path: 'configuracion/sucursales',
+                name: 'Sucursales',
+                component: () => import('@/views/configuracion/SucursalesView.vue'),
+                meta: { auth: true, permission: 'ver configuracion' }
+            },
+            {
                 path: 'reportes',
                 name: 'Reportes',
                 component: () => import('@/views/ReportesView.vue'),

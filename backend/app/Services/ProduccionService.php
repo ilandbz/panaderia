@@ -19,6 +19,8 @@ class ProduccionService
     public function ejecutar(Receta $receta, float $cantidadRendimiento)
     {
         return DB::transaction(function () use ($receta, $cantidadRendimiento) {
+            $sucursal_id = config('app.sucursal_id') ?? auth()->user()->sucursal_id;
+            
             // Factor de escala (si se produce más o menos del rendimiento base de la receta)
             $factor = $cantidadRendimiento / $receta->rendimiento;
 
@@ -27,20 +29,29 @@ class ProduccionService
                 $insumo = $detalle->insumo;
                 $cantidadNecesaria = $detalle->cantidad * $factor;
 
-                if ($insumo->stock < $cantidadNecesaria) {
-                    throw new \Exception("Insumo insuficiente: {$insumo->nombre}");
+                // Obtener stock actual del insumo en la sucursal
+                $pivotInsumo = $insumo->sucursales()->where('sucursal_id', $sucursal_id)->first();
+                $stockAnteriorInsumo = $pivotInsumo ? $pivotInsumo->pivot->stock : 0;
+
+                if ($stockAnteriorInsumo < $cantidadNecesaria) {
+                    throw new \Exception("Insumo insuficiente en esta sede: {$insumo->nombre}");
                 }
 
-                $stockAnterior = $insumo->stock;
-                $insumo->decrement('stock', $cantidadNecesaria);
+                $nuevoStockInsumo = $stockAnteriorInsumo - $cantidadNecesaria;
+
+                // Descontar en la sede
+                $insumo->sucursales()->updateExistingPivot($sucursal_id, [
+                    'stock' => $nuevoStockInsumo
+                ]);
 
                 MovimientoInventario::create([
                     'producto_id' => $insumo->id,
                     'usuario_id'  => Auth::id(),
+                    'sucursal_id' => $sucursal_id,
                     'tipo'        => 'egreso',
                     'cantidad'    => $cantidadNecesaria,
-                    'stock_anterior' => $stockAnterior,
-                    'stock_nuevo'    => $insumo->stock,
+                    'stock_anterior' => $stockAnteriorInsumo,
+                    'stock_nuevo'    => $nuevoStockInsumo,
                     'motivo'      => 'produccion',
                     'observacion' => "Uso en producción de: {$receta->producto->nombre}",
                 ]);
@@ -48,16 +59,24 @@ class ProduccionService
 
             // 2. Incrementar stock del producto terminado
             $productoTerminado = $receta->producto;
-            $stockAnteriorPT = $productoTerminado->stock;
-            $productoTerminado->increment('stock', $cantidadRendimiento);
+            
+            $pivotPT = $productoTerminado->sucursales()->where('sucursal_id', $sucursal_id)->first();
+            $stockAnteriorPT = $pivotPT ? $pivotPT->pivot->stock : 0;
+            $nuevoStockPT = $stockAnteriorPT + $cantidadRendimiento;
+
+            // Incrementar en la sede
+            $productoTerminado->sucursales()->syncWithoutDetaching([
+                $sucursal_id => ['stock' => $nuevoStockPT]
+            ]);
 
             MovimientoInventario::create([
                 'producto_id' => $productoTerminado->id,
                 'usuario_id'  => Auth::id(),
+                'sucursal_id' => $sucursal_id,
                 'tipo'        => 'ingreso',
                 'cantidad'    => $cantidadRendimiento,
                 'stock_anterior' => $stockAnteriorPT,
-                'stock_nuevo'    => $productoTerminado->stock,
+                'stock_nuevo'    => $nuevoStockPT,
                 'motivo'      => 'produccion',
                 'observacion' => "Nueva producción de: {$receta->producto->nombre}",
             ]);

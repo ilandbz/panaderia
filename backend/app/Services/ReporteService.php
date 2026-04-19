@@ -29,8 +29,11 @@ class ReporteService
                                   ->where('tipo', 'egreso')
                                   ->sum('monto');
 
-        $productosBajos = Producto::where('stock', '<=', DB::raw('stock_minimo'))
-                                  ->whereNull('deleted_at')
+        $productosBajos = DB::table('producto_sucursal')
+                                  ->join('productos', 'productos.id', '=', 'producto_sucursal.producto_id')
+                                  ->where('producto_sucursal.sucursal_id', config('app.sucursal_id'))
+                                  ->whereColumn('producto_sucursal.stock', '<=', 'producto_sucursal.stock_minimo')
+                                  ->whereNull('productos.deleted_at')
                                   ->count();
 
         $ventasMes = Venta::whereMonth('created_at', Carbon::now()->month)
@@ -264,10 +267,19 @@ class ReporteService
     // =========================================================
     public function stockBajo(): array
     {
-        return Producto::where('stock', '<=', DB::raw('stock_minimo'))
-            ->whereNull('deleted_at')
-            ->select('id', 'nombre', 'stock', 'stock_minimo', 'unidad_medida')
-            ->orderBy('stock')
+        return DB::table('producto_sucursal')
+            ->join('productos', 'productos.id', '=', 'producto_sucursal.producto_id')
+            ->where('producto_sucursal.sucursal_id', config('app.sucursal_id'))
+            ->whereColumn('producto_sucursal.stock', '<=', 'producto_sucursal.stock_minimo')
+            ->whereNull('productos.deleted_at')
+            ->select(
+                'productos.id', 
+                'productos.nombre', 
+                'producto_sucursal.stock', 
+                'producto_sucursal.stock_minimo', 
+                'productos.unidad_medida'
+            )
+            ->orderBy('producto_sucursal.stock')
             ->get()
             ->map(fn($p) => [
                 'id'           => $p->id,
@@ -285,12 +297,15 @@ class ReporteService
     // =========================================================
     public function porVencer(int $dias = 7): array
     {
-        return Producto::whereNotNull('fecha_vencimiento')
-            ->whereDate('fecha_vencimiento', '>=', Carbon::today())
-            ->whereDate('fecha_vencimiento', '<=', Carbon::today()->addDays($dias))
-            ->whereNull('deleted_at')
-            ->select('id', 'nombre', 'stock', 'fecha_vencimiento')
-            ->orderBy('fecha_vencimiento')
+        return DB::table('productos')
+            ->join('producto_sucursal', 'productos.id', '=', 'producto_sucursal.producto_id')
+            ->where('producto_sucursal.sucursal_id', config('app.sucursal_id'))
+            ->whereNotNull('productos.fecha_vencimiento')
+            ->whereDate('productos.fecha_vencimiento', '>=', Carbon::today())
+            ->whereDate('productos.fecha_vencimiento', '<=', Carbon::today()->addDays($dias))
+            ->whereNull('productos.deleted_at')
+            ->select('productos.id', 'productos.nombre', 'producto_sucursal.stock', 'productos.fecha_vencimiento')
+            ->orderBy('productos.fecha_vencimiento')
             ->get()
             ->map(fn($p) => [
                 'id'               => $p->id,

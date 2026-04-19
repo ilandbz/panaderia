@@ -21,6 +21,37 @@ export const useSucursalStore = defineStore('sucursal', () => {
         }
     }
 
+    async function saveSucursal(data) {
+        loading.value = true;
+        try {
+            const response = await axios.post('/api/sucursales', data);
+            await fetchSucursales();
+            return response.data;
+        } catch (error) {
+            console.error('Error saving sucursal:', error);
+            throw error;
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    async function updateSucursal(id, data) {
+        loading.value = true;
+        try {
+            const response = await axios.put(`/api/sucursales/${id}`, data);
+            await fetchSucursales();
+            if (sucursalActual.value && sucursalActual.value.id === id) {
+                setSucursal(response.data.data);
+            }
+            return response.data;
+        } catch (error) {
+            console.error('Error updating sucursal:', error);
+            throw error;
+        } finally {
+            loading.value = false;
+        }
+    }
+
     function setSucursal(sucursal) {
         sucursalActual.value = sucursal;
         localStorage.setItem('sucursal_actual', JSON.stringify(sucursal));
@@ -51,6 +82,8 @@ export const useSucursalStore = defineStore('sucursal', () => {
         hasSucursal,
         fetchSucursales,
         setSucursal,
+        saveSucursal,
+        updateSucursal,
         clearSucursal
     };
 });

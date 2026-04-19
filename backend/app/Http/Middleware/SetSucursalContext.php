@@ -17,8 +17,15 @@ class SetSucursalContext
     {
         $sucursalId = $request->header('X-Sucursal-Id');
 
-        if (!$sucursalId && auth()->check()) {
-            $sucursalId = auth()->user()->sucursal_id;
+        // Si no viene en el header, intentar obtenerlo del usuario autenticado
+        if (!$sucursalId) {
+            try {
+                if (auth()->check()) {
+                    $sucursalId = auth()->user()->sucursal_id;
+                }
+            } catch (\Exception $e) {
+                // Silenciar errores de auth si el sistema no está totalmente listo
+            }
         }
 
         if ($sucursalId) {

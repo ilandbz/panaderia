@@ -63,6 +63,10 @@
           <i class="fas fa-user-shield"></i>
           <span v-if="!isCollapsed">Roles y Permisos</span>
         </router-link>
+        <router-link v-can="'ver configuracion'" to="/configuracion/sucursales" class="nav-item">
+          <i class="fas fa-store"></i>
+          <span v-if="!isCollapsed">Sucursales</span>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer p-3 border-top border-secondary">
@@ -76,6 +80,7 @@
     <!-- Main Content -->
     <main class="flex-grow-1 d-flex flex-column vh-100 overflow-hidden">
       <!-- Navbar -->
+      <header class="navbar bg-white shadow-sm px-4 py-2 d-flex justify-content-between align-items-center no-print">
         <div class="d-flex align-items-center">
           <i class="fas fa-store text-orange me-2"></i>
           <span class="text-orange fw-bold me-2">{{ sucursalActual?.nombre }}</span>

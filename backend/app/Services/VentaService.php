@@ -135,15 +135,22 @@ class VentaService
             // 1. Revertir Stock y Kardex
             foreach ($venta->detalles as $detalle) {
                 $producto = $detalle->producto;
-                $stockAnterior = $producto->stock;
+                
+                // Obtener stock actual en la sucursal de la venta
+                $pivot = $producto->sucursales()->where('sucursal_id', $venta->sucursal_id)->first();
+                $stockActual = $pivot ? $pivot->pivot->stock : 0;
+                $stockAnterior = $stockActual;
 
-                // Restituir Stock
-                $producto->increment('stock', $detalle->cantidad);
+                // Restituir Stock en la sucursal
+                $producto->sucursales()->updateExistingPivot($venta->sucursal_id, [
+                    'stock' => $stockActual + $detalle->cantidad
+                ]);
 
                 // Registrar Kardex
                 MovimientoInventario::create([
                     'producto_id'    => $producto->id,
                     'usuario_id'     => auth()->id() ?? $venta->usuario_id,
+                    'sucursal_id'    => $venta->sucursal_id,
                     'venta_id'       => $venta->id,
                     'tipo'           => 'ingreso',
                     'cantidad'       => $detalle->cantidad,
