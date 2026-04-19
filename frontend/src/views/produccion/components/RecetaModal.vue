@@ -183,7 +183,6 @@ const cerrar = () => {
                                     </button>
                                 </div>
                                 <div class="table-responsive">
-                                    {{ errors }}
                                     <table class="table table-sm align-middle">
                                         <thead class="bg-light">
                                             <tr>

@@ -5,6 +5,12 @@ export const useProductStore = defineStore('product', {
     state: () => ({
         products: [],
         categories: [],
+        pagination: {
+            current_page: 1,
+            last_page: 1,
+            total: 0,
+            per_page: 15,
+        },
         loading: false,
     }),
 
@@ -13,14 +19,29 @@ export const useProductStore = defineStore('product', {
             this.loading = true;
             try {
                 const response = await api.get('/productos', { params });
-                const payload = response?.data ?? response;
-                const dataNode = payload?.data ?? payload;
+                // En el interceptor ya tenemos response.data (el JSON {success, data, message})
+                const apiData = response.data; // Esto es el paginador de Laravel: { current_page, data: [], total, ... }
 
-                this.products = Array.isArray(dataNode?.data)
-                    ? dataNode.data
-                    : Array.isArray(dataNode)
-                        ? dataNode
-                        : [];
+                if (apiData && Array.isArray(apiData.data)) {
+                    // Si viene la estructura de Laravel Paginate
+                    this.products = apiData.data;
+                    this.pagination = {
+                        current_page: apiData.current_page,
+                        last_page: apiData.last_page,
+                        total: apiData.total,
+                        per_page: apiData.per_page,
+                    };
+                } else if (Array.isArray(apiData)) {
+                    // Si viene un array simple (fallback)
+                    this.products = apiData;
+                    this.pagination.total = apiData.length;
+                    this.pagination.last_page = 1;
+                } else if (Array.isArray(response)) {
+                    // Si el interceptor no devolvió .data y recibimos el array directamente
+                    this.products = response;
+                } else {
+                    this.products = [];
+                }
             } catch (error) {
                 console.error('Error al cargar productos:', error);
                 this.products = [];

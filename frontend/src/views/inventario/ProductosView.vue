@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useProductStore } from '@/stores/product.store';
 import Swal from 'sweetalert2';
 import MovimientosModal from '@/components/inventario/MovimientosModal.vue';
@@ -34,28 +34,36 @@ const form = ref({
   activo: true
 });
 
+let searchTimeout = null;
+
+const fetchProducts = async (page = 1) => {
+  loading.value = true;
+  await productStore.fetchProducts({
+    search: search.value,
+    categoria_id: categoryFilter.value,
+    page: page
+  });
+  loading.value = false;
+};
+
 onMounted(async () => {
-  await productStore.fetchProducts();
+  fetchProducts();
   await productStore.fetchCategories();
 });
 
-const productosFiltrados = computed(() => {
-  let lista = Array.isArray(productStore.products)
-    ? productStore.products.filter(p => p && p.id)
-    : [];
-
-  if (categoryFilter.value) {
-    lista = lista.filter(p => p.categoria_id == categoryFilter.value);
-  }
-
-  if (!search.value) return lista;
-
-  const searchTerm = search.value.toLowerCase();
-  return lista.filter(p =>
-    (p.nombre || '').toLowerCase().includes(searchTerm) ||
-    (p.codigo || '').toLowerCase().includes(searchTerm)
-  );
+watch([search, categoryFilter], () => {
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    fetchProducts(1);
+  }, 400);
 });
+
+const changePage = (page) => {
+  if (page >= 1 && page <= productStore.pagination.last_page) {
+    fetchProducts(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
 
 const openModal = (producto = null) => {
   if (producto) {
@@ -164,7 +172,7 @@ const handleDelete = async (producto) => {
     <div class="card border-0 rounded-4 shadow-sm p-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold m-0 text-brown">
-          <i class="fas fa-boxes text-primary me-2"></i>Gestión de Productos ({{ productosFiltrados.length }})
+          <i class="fas fa-boxes text-primary me-2"></i>Gestión de Productos ({{ productStore.pagination.total }})
         </h3>
         <button class="btn btn-primary rounded-pill px-4 shadow-sm" @click="openModal()">
           <i class="fas fa-plus me-2"></i> Nuevo Producto
@@ -208,7 +216,7 @@ const handleDelete = async (producto) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="producto in productosFiltrados" :key="producto?.id">
+            <tr v-for="producto in productStore.products" :key="producto?.id">
               <td><span class="badge bg-light text-dark font-monospace border">{{ producto.codigo || 'S/N' }}</span></td>
               <td class="fw-bold text-dark">{{ producto.nombre }}</td>
               <td>
@@ -250,7 +258,7 @@ const handleDelete = async (producto) => {
                 </div>
               </td>
             </tr>
-            <tr v-if="productosFiltrados.length === 0">
+            <tr v-if="productStore.products.length === 0 && !loading">
               <td colspan="8" class="text-center py-5 text-muted">
                 <i class="fas fa-box-open fa-3x mb-3 opacity-25"></i>
                 <p>No se encontraron productos.</p>
@@ -258,6 +266,36 @@ const handleDelete = async (producto) => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Paginación -->
+      <div v-if="productStore.pagination.total > 0" class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 gap-3">
+        <div class="text-muted small order-2 order-md-1">
+          Mostrando {{ productStore.products.length }} de <strong>{{ productStore.pagination.total }}</strong> productos registrados
+        </div>
+        <nav v-if="productStore.pagination.last_page > 1" class="order-1 order-md-2">
+          <ul class="pagination pagination-sm m-0">
+            <li class="page-item" :class="{ disabled: productStore.pagination.current_page === 1 }">
+              <button class="btn btn-sm btn-outline-primary rounded-pill me-2" @click="changePage(productStore.pagination.current_page - 1)" :disabled="productStore.pagination.current_page === 1">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </li>
+            <li v-for="page in productStore.pagination.last_page" :key="page" class="page-item mx-1">
+              <button 
+                class="btn btn-sm rounded-pill px-3" 
+                :class="productStore.pagination.current_page === page ? 'btn-primary' : 'btn-light'"
+                @click="changePage(page)"
+              >
+                {{ page }}
+              </button>
+            </li>
+            <li class="page-item" :class="{ disabled: productStore.pagination.current_page === productStore.pagination.last_page }">
+              <button class="btn btn-sm btn-outline-primary rounded-pill ms-2" @click="changePage(productStore.pagination.current_page + 1)" :disabled="productStore.pagination.current_page === productStore.pagination.last_page">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
 
@@ -306,14 +344,18 @@ const handleDelete = async (producto) => {
                   <label class="form-label fw-bold small">Precio de Venta</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light border-end-0">S/</span>
-                    <input v-model="form.precio_venta" type="number" step="0.01" class="form-control rounded-3 border-start-0" required>
+                    <input v-model="form.precio_venta"
+                    type="number"
+                    step="0.10"
+                    class="form-control rounded-3 border-start-0"
+                    required>
                   </div>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label fw-bold small">Costo (Opcional)</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light border-end-0">S/</span>
-                    <input v-model="form.costo" type="number" step="0.01" class="form-control rounded-3 border-start-0">
+                    <input v-model="form.costo" type="number" step="0.10" class="form-control rounded-3 border-start-0">
                   </div>
                 </div>
                 <div class="col-md-4">
@@ -323,13 +365,17 @@ const handleDelete = async (producto) => {
 
                 <div class="col-md-4">
                   <label class="form-label fw-bold small">Stock Mínimo</label>
-                  <input v-model="form.stock_minimo" type="number" step="0.001" class="form-control rounded-3" required>
+                  <input v-model="form.stock_minimo"
+                  type="number"
+                  step="1"
+                  class="form-control rounded-3"
+                  required>
                 </div>
 
                 <!-- Stock Inicial (Solo en nuevo) -->
                 <div v-if="!isEditing" class="col-md-4">
                   <label class="form-label fw-bold small">Stock Inicial</label>
-                  <input v-model="form.stock" type="number" step="0.001" class="form-control rounded-3">
+                  <input v-model="form.stock" type="number" step="1" class="form-control rounded-3">
                 </div>
 
                 <div class="col-md-4 d-flex align-items-end mb-1">
