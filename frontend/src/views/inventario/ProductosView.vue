@@ -346,7 +346,7 @@ const handleDelete = async (producto) => {
                     <span class="input-group-text bg-light border-end-0">S/</span>
                     <input v-model="form.precio_venta"
                     type="number"
-                    step="0.10"
+                    step="0.01"
                     class="form-control rounded-3 border-start-0"
                     required>
                   </div>
