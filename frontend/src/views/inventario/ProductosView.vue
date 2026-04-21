@@ -275,10 +275,15 @@ const handleDelete = async (producto) => {
                   </span>
                 </td>
                 <td class="text-center">
-                  <span :class="['fw-bold', producto.stock <= producto.stock_minimo ? 'text-danger' : 'text-dark']">
-                    {{ producto.stock }}
-                  </span>
-                  <span class="extrasmall text-muted ms-1">{{ producto.unidad_medida }}</span>
+                  <div class="d-flex align-items-center justify-content-center">
+                    <span :class="['fw-bold', producto.stock <= producto.stock_minimo ? 'text-danger' : 'text-dark']">
+                      {{ producto.stock }}
+                    </span>
+                    <span class="extrasmall text-muted ms-1 me-2">{{ producto.unidad_medida }}</span>
+                    <button v-if="!producto.variantes?.length" @click="openAjuste(producto)" class="btn btn-xs btn-outline-primary border-0 p-1" title="Ajustar Stock Manual">
+                      <i class="fas fa-plus-minus"></i>
+                    </button>
+                  </div>
                 </td>
                 <td class="text-center">
                     <span v-if="producto.variantes?.length" class="text-muted small italic">Desde</span>
@@ -316,9 +321,14 @@ const handleDelete = async (producto) => {
                 <td><span class="text-muted small">{{ producto.categoria?.nombre }}</span></td>
                 <td><span class="text-muted extrasmall">VARIANTE</span></td>
                 <td class="text-center">
-                  <span :class="['small', variante.stock <= variante.stock_minimo ? 'text-danger fw-bold' : 'text-muted']">
-                    {{ variante.stock }}
-                  </span>
+                   <div class="d-flex align-items-center justify-content-center">
+                    <span :class="['small', variante.stock <= variante.stock_minimo ? 'text-danger fw-bold' : 'text-muted']">
+                        {{ variante.stock }}
+                    </span>
+                    <button @click="openAjuste(variante)" class="btn btn-xs btn-outline-primary border-0 p-0 ms-2" title="Ajustar Stock Variante">
+                        <i class="fas fa-plus-minus small"></i>
+                    </button>
+                   </div>
                 </td>
                 <td class="text-center">
                   <span class="fw-bold text-primary">S/ {{ variante.precio_venta }}</span>
