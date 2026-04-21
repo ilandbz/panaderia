@@ -13,9 +13,14 @@ class ProductoService
     {
         $sucursal_id = $filtros['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
 
-        $query = Producto::with(['categoria', 'sucursales' => function ($q) use ($sucursal_id) {
+        $query = Producto::with(['categoria', 'variantes', 'sucursales' => function ($q) use ($sucursal_id) {
             $q->where('sucursales.id', $sucursal_id);
         }]);
+
+        // Filtrar solo destacados/padres por defecto si no se pide uno específico
+        if (!isset($filtros['include_children']) || $filtros['include_children'] !== 'true') {
+            $query->whereNull('parent_id');
+        }
 
         if (isset($filtros['categoria_id']) && $filtros['categoria_id']) {
             $query->where('categoria_id', $filtros['categoria_id']);
@@ -33,11 +38,8 @@ class ProductoService
         if (isset($filtros['all']) && ($filtros['all'] === 'true' || $filtros['all'] === true)) {
             $productos = $query->get();
             
-            $productos->transform(function ($producto) {
-                $sucursal = $producto->sucursales->first();
-                $producto->stock = $sucursal ? $sucursal->pivot->stock : 0;
-                $producto->stock_minimo = $sucursal ? $sucursal->pivot->stock_minimo : 0;
-                return $producto;
+            $productos->transform(function ($producto) use ($sucursal_id) {
+                return $this->mapearStockYVariantes($producto, $sucursal_id);
             });
             
             return $productos;
@@ -46,14 +48,38 @@ class ProductoService
         $productos = $query->paginate($filtros['per_page'] ?? 15);
 
         // Mapear el stock de la sucursal al objeto base para compatibilidad con el frontend
-        $productos->getCollection()->transform(function($producto) {
-            $sucursal = $producto->sucursales->first();
-            $producto->stock = $sucursal ? $sucursal->pivot->stock : 0;
-            $producto->stock_minimo = $sucursal ? $sucursal->pivot->stock_minimo : 0;
-            return $producto;
+        $productos->getCollection()->transform(function($producto) use ($sucursal_id) {
+            return $this->mapearStockYVariantes($producto, $sucursal_id);
         });
 
         return $productos;
+    }
+
+    /**
+     * Mapea el stock de la sucursal y procesa las variantes recursivamente
+     */
+    private function mapearStockYVariantes($producto, $sucursal_id)
+    {
+        $sucursal = $producto->sucursales->where('id', $sucursal_id)->first();
+        $producto->stock = $sucursal ? $sucursal->pivot->stock : 0;
+        $producto->stock_minimo = $sucursal ? $sucursal->pivot->stock_minimo : 0;
+
+        if ($producto->variantes && $producto->variantes->count() > 0) {
+            $producto->variantes->transform(function ($variante) use ($sucursal_id) {
+                // Cargar sucursales para la variante si no están cargadas
+                if (!$variante->relationLoaded('sucursales')) {
+                    $variante->load(['sucursales' => function($q) use ($sucursal_id) {
+                        $q->where('sucursales.id', $sucursal_id);
+                    }]);
+                }
+                $vSucursal = $variante->sucursales->where('id', $sucursal_id)->first();
+                $variante->stock = $vSucursal ? $vSucursal->pivot->stock : 0;
+                $variante->stock_minimo = $vSucursal ? $vSucursal->pivot->stock_minimo : 0;
+                return $variante;
+            });
+        }
+
+        return $producto;
     }
 
     public function crear(array $data)

@@ -25,6 +25,9 @@ const montoRecibido = ref(0);
 const { show: showPay, hide: hidePay } = useModal('payModal');
 const { show: showResult, hide: hideResult } = useModal('ventaResultadoModal');
 const { show: showClienteModal, hide: hideClienteModal } = useModal('clienteQuickModal');
+const { show: showVariants, hide: hideVariants } = useModal('variantModal');
+
+const selectedParent = ref(null);
 
 const selectedCliente = ref(null);
 const searchCliente = ref('');
@@ -146,6 +149,13 @@ const addToCart = (product) => {
     Swal.fire('Atención', 'Debe abrir caja para realizar ventas', 'warning');
     return;
   }
+
+  // Si tiene variantes y no se ha seleccionado una variante específica todavía (viniendo del grid)
+  if (product.variantes && product.variantes.length > 0 && !product.parent_id) {
+    selectedParent.value = product;
+    showVariants();
+    return;
+  }
   
   const existing = cart.value.find(item => item.id === product.id);
   const currentQty = existing ? existing.cantidad : 0;
@@ -155,10 +165,16 @@ const addToCart = (product) => {
     return;
   }
 
+  const nombreMostrar = product.parent_id ? `${product.nombre} (${product.nombre_variante})` : product.nombre;
+
   if (existing) {
     existing.cantidad++;
   } else {
-    cart.value.push({ ...product, cantidad: 1 });
+    cart.value.push({ ...product, nombre_completo: nombreMostrar, cantidad: 1 });
+  }
+  
+  if (product.parent_id) {
+    hideVariants();
   }
 };
 
@@ -329,14 +345,21 @@ const nuevaVenta = () => {
 
             <div class="row g-3">
               <div v-for="product in paginatedProducts" :key="product.id" class="col-6 col-md-3">
-                <div class="card product-card border-0 rounded-4 shadow-sm h-100 position-relative transition-all" @click="addToCart(product)">
-                  <div class="card-img-top p-4 text-center bg-light-subtle rounded-top-4">
+                  <div class="card product-card border-0 rounded-4 shadow-sm h-100 position-relative transition-all" @click="addToCart(product)">
+                    <div v-if="product.variantes?.length" class="position-absolute top-0 end-0 m-2">
+                        <span class="badge bg-primary rounded-pill small shadow-sm">
+                            <i class="fas fa-layer-group me-1"></i>{{ product.variantes.length }} opciones
+                        </span>
+                    </div>
+                    <div class="card-img-top p-4 text-center bg-light-subtle rounded-top-4">
                      <i class="fas fa-3x text-primary opacity-25" :class="product.categoria.icono"></i>
-                     <span v-if="product.stock <= 0" class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm">SIN STOCK</span>
+                     <span v-if="product.stock <= 0 && !product.variantes?.length" class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm">SIN STOCK</span>
                   </div>
                   <div class="card-body p-3 text-center">
                     <div class="small fw-bold text-truncate text-dark mb-1">{{ product.nombre }}</div>
-                    <div class="text-primary fw-bold fs-5">S/ {{ product.precio_venta }}</div>
+                    <div class="text-primary fw-bold" :class="product.variantes?.length ? 'small opacity-75' : 'fs-5'">
+                        {{ product.variantes?.length ? 'Desde ' : '' }}S/ {{ product.precio_venta }}
+                    </div>
                     <div class="extrasmall text-muted mt-1">Stock: <span :class="product.stock < 10 ? 'text-danger fw-bold' : ''">{{ product.stock }}</span></div>
 
                     <!-- Botones rápidos por monto (Soles) -->
@@ -397,7 +420,7 @@ const nuevaVenta = () => {
             </div>
             <div v-for="item in cart" :key="item.id" class="cart-item mb-4 d-flex align-items-center justify-content-between animate__animated animate__fadeIn">
               <div class="flex-grow-1">
-                <div class="small fw-bold text-dark text-truncate mb-1" style="max-width: 180px;">{{ item.nombre }}</div>
+                <div class="small fw-bold text-dark text-truncate mb-1" style="max-width: 180px;">{{ item.nombre_completo || item.nombre }}</div>
                 <div class="extrasmall text-muted d-flex align-items-center mt-2">
                   <div class="input-group input-group-sm border rounded-pill overflow-hidden shadow-sm me-2" style="width: 130px;">
                     <button class="btn btn-light btn-sm border-0 px-2" @click="updateQuantity(item.id, item.cantidad - 1)" :disabled="item.cantidad <= 1">
@@ -548,6 +571,41 @@ const nuevaVenta = () => {
     />
 
     <ClienteQuickModal @saved="onClienteSaved" />
+
+    <!-- Modal de Selección de Variantes -->
+    <div class="modal fade no-print" id="variantModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-5 overflow-hidden">
+          <div class="modal-header border-0 bg-primary text-white p-4">
+             <h5 class="modal-title fw-bold"><i class="fas fa-layer-group me-2"></i> {{ selectedParent?.nombre }}</h5>
+             <button type="button" class="btn-close btn-close-white" @click="hideVariants"></button>
+          </div>
+          <div class="modal-body p-4 bg-light">
+             <p class="text-muted small mb-4 fw-bold text-uppercase tracking-widest">Seleccione una presentación:</p>
+             <div class="row g-3">
+                <div v-for="v in selectedParent?.variantes" :key="v.id" class="col-md-6">
+                    <div class="card variant-card border-0 rounded-4 shadow-sm h-100 cursor-pointer transition-all" 
+                         :class="v.stock <= 0 ? 'opacity-50 grayscale' : 'hover-lift'"
+                         @click="v.stock > 0 && addToCart(v)">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark">{{ v.nombre_variante }}</span>
+                                <span class="badge rounded-pill" :class="v.stock > 10 ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'">
+                                    Stock: {{ v.stock }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">{{ v.codigo || 'S/N' }}</span>
+                                <span class="h5 fw-bold text-primary mb-0 font-monospace">S/ {{ v.precio_venta }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -567,6 +625,17 @@ const nuevaVenta = () => {
   transform: translateY(-8px);
   box-shadow: 0 15px 30px rgba(0,0,0,0.08) !important;
 }
+
+.variant-card {
+    border: 1px solid #edf2f7 !important;
+}
+.hover-lift:hover {
+    transform: translateY(-5px);
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+    background-color: #fff;
+}
+.grayscale { filter: grayscale(1); }
 
 .custom-switch { width: 3.5em; height: 1.7em; cursor: pointer; }
 .extrasmall { font-size: 0.7rem; }

@@ -34,7 +34,9 @@ class ProductoController extends Controller
             'stock_minimo'  => 'nullable|numeric',
             'unidad_medida' => 'required|string|max:10',
             'codigo'        => 'nullable|string|max:50|unique:productos,codigo',
-            'stock'         => 'nullable|numeric', // Stock inicial opcional
+            'stock'         => 'nullable|numeric',
+            'parent_id'     => 'nullable|exists:productos,id',
+            'nombre_variante' => 'nullable|string|max:100',
         ]);
 
         $producto = $this->service->crear($data);
@@ -58,6 +60,8 @@ class ProductoController extends Controller
             'unidad_medida' => 'string|max:10',
             'codigo'        => 'nullable|string|max:50|unique:productos,codigo,' . $producto->id,
             'activo'        => 'boolean',
+            'parent_id'     => 'nullable|exists:productos,id',
+            'nombre_variante' => 'nullable|string|max:100',
         ]);
 
         $producto = $this->service->actualizar($producto, $data);

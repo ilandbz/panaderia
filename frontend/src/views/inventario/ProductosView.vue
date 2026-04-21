@@ -13,6 +13,7 @@ const loading = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const selectedProduct = ref(null);
+const expandedRows = ref([]); // Almacena IDs de productos padres expandidos
 
 const { show: showModal, hide: hideModal } = useModal('productModal');
 const { show: showKardex, hide: hideKardex } = useModal('kardexModal', {
@@ -24,6 +25,8 @@ const { show: showAjuste, hide: hideAjuste } = useModal('ajusteModal', {
 
 const form = ref({
   nombre: '',
+  nombre_variante: '',
+  parent_id: '',
   categoria_id: '',
   tipo: 'reventa',
   precio_venta: 0,
@@ -64,6 +67,8 @@ const openModal = (producto = null) => {
     currentId.value = producto.id;
     form.value = {
       nombre: producto.nombre,
+      nombre_variante: producto.nombre_variante || '',
+      parent_id: producto.parent_id || '',
       categoria_id: producto.categoria_id,
       tipo: producto.tipo,
       precio_venta: producto.precio_venta,
@@ -78,6 +83,8 @@ const openModal = (producto = null) => {
     currentId.value = null;
     form.value = {
       nombre: '',
+      nombre_variante: '',
+      parent_id: '',
       categoria_id: '',
       tipo: 'reventa',
       precio_venta: 0,
@@ -89,6 +96,20 @@ const openModal = (producto = null) => {
     };
   }
   showModal();
+};
+
+const toggleExpand = (id) => {
+  const index = expandedRows.value.indexOf(id);
+  if (index > -1) {
+    expandedRows.value.splice(index, 1);
+  } else {
+    expandedRows.value.push(id);
+  }
+};
+
+const handleEdit = (producto) => {
+  selectedProduct.value = { ...producto };
+  showKardex();
 };
 
 const openKardex = (producto) => {
@@ -225,48 +246,100 @@ const handleDelete = async (producto) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="producto in productStore.paginatedProducts" :key="producto?.id">
-              <td><span class="badge bg-light text-dark font-monospace border">{{ producto.codigo || 'S/N' }}</span></td>
-              <td class="fw-bold text-dark">{{ producto.nombre }}</td>
-              <td>
-                <i v-if="producto.categoria?.icono" :class="['fas', producto.categoria.icono, 'me-1']" :style="{ color: producto.categoria.color || 'inherit' }"></i>
-                {{ producto.categoria?.nombre || 'Sin categoría' }}
-              </td>
-              <td>
-                <span class="badge rounded-pill bg-info-subtle text-info px-3 small border border-info-subtle">
-                  {{ producto.tipo?.toUpperCase() || '—' }}
-                </span>
-              </td>
-              <td>
-                <div class="d-flex align-items-center">
-                  <span :class="Number(producto.stock) <= Number(producto.stock_minimo) ? 'text-danger fw-bold' : 'text-dark fw-bold'">
-                    {{ producto.stock ?? 0 }} {{ producto.unidad_medida || '' }}
+            <template v-for="producto in productStore.paginatedProducts" :key="producto?.id">
+              <!-- Fila Padre -->
+              <tr :class="{ 'bg-light-subtle': producto.variantes?.length > 0 }">
+                <td><span class="badge bg-light text-dark font-monospace border">{{ producto.codigo || 'S/N' }}</span></td>
+                <td class="fw-bold text-dark">
+                    <div class="d-flex align-items-center">
+                        <button 
+                            v-if="producto.variantes?.length" 
+                            class="btn btn-xs btn-link text-primary p-0 me-2" 
+                            @click="toggleExpand(producto.id)"
+                        >
+                            <i class="fas" :class="expandedRows.includes(producto.id) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                        </button>
+                        <span>{{ producto.nombre }}</span>
+                    </div>
+                    <div v-if="producto.variantes?.length" class="extrasmall text-primary mt-1 ms-3">
+                        <i class="fas fa-layer-group me-1"></i>{{ producto.variantes.length }} variantes
+                    </div>
+                </td>
+                <td>
+                  <i v-if="producto.categoria?.icono" :class="['fas', producto.categoria.icono, 'me-1']" :style="{ color: producto.categoria.color || 'inherit' }"></i>
+                  {{ producto.categoria?.nombre || 'Sin categoría' }}
+                </td>
+                <td>
+                  <span class="badge rounded-pill" :class="producto.tipo === 'elaborado' ? 'bg-info-subtle text-info' : producto.tipo === 'reventa' ? 'bg-secondary-subtle text-secondary' : 'bg-warning-subtle text-warning'">
+                    {{ producto.tipo.toUpperCase() }}
                   </span>
-                  <button @click="openAjuste(producto)" class="btn btn-sm text-primary p-1 ms-2" title="Ajustar Stock Manualmente">
-                    <i class="fas fa-plus-minus small"></i>
-                  </button>
-                </div>
-              </td>
-              <td class="fw-bold text-primary">S/ {{ producto.precio_venta ?? '0.00' }}</td>
-              <td>
-                <span class="badge rounded-pill" :class="producto.activo ? 'bg-success' : 'bg-danger'">
-                  {{ producto.activo ? 'Activo' : 'Inactivo' }}
-                </span>
-              </td>
-              <td class="text-end">
-                <div class="btn-group btn-group-sm rounded-pill bg-light p-1">
-                  <button class="btn btn-outline-primary border-0 rounded-pill" @click="openModal(producto)" title="Editar">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-outline-info border-0 rounded-pill" @click="openKardex(producto)" title="Ver Kardex">
-                    <i class="fas fa-history"></i>
-                  </button>
-                  <button class="btn btn-outline-danger border-0 rounded-pill" @click="handleDelete(producto)" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
+                </td>
+                <td class="text-center">
+                  <span :class="['fw-bold', producto.stock <= producto.stock_minimo ? 'text-danger' : 'text-dark']">
+                    {{ producto.stock }}
+                  </span>
+                  <span class="extrasmall text-muted ms-1">{{ producto.unidad_medida }}</span>
+                </td>
+                <td class="text-center">
+                    <span v-if="producto.variantes?.length" class="text-muted small italic">Desde</span>
+                    <span class="fw-bold text-primary">S/ {{ producto.precio_venta }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge rounded-pill" :class="producto.activo ? 'bg-success' : 'bg-danger'">
+                    {{ producto.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group shadow-sm rounded-3 overflow-hidden">
+                    <button class="btn btn-sm btn-white text-primary border" @click="openModal(producto)" title="Editar">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-white text-info border" @click="openKardex(producto)" title="Kardex / Movimientos">
+                      <i class="fas fa-history"></i>
+                    </button>
+                    <button class="btn btn-sm btn-white text-danger border" @click="handleDelete(producto)" title="Eliminar">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Filas de Variantes (Solo si está expandido) -->
+              <tr v-if="expandedRows.includes(producto.id)" v-for="variante in producto.variantes" :key="variante.id" class="bg-light animate__animated animate__fadeIn">
+                <td class="ps-4"><span class="badge bg-white text-muted font-monospace border small">{{ variante.codigo || 'S/N' }}</span></td>
+                <td class="ps-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2"></i>
+                        <span class="text-muted">{{ variante.nombre_variante }}</span>
+                    </div>
+                </td>
+                <td><span class="text-muted small">{{ producto.categoria?.nombre }}</span></td>
+                <td><span class="text-muted extrasmall">VARIANTE</span></td>
+                <td class="text-center">
+                  <span :class="['small', variante.stock <= variante.stock_minimo ? 'text-danger fw-bold' : 'text-muted']">
+                    {{ variante.stock }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="fw-bold text-primary">S/ {{ variante.precio_venta }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-light text-muted border rounded-pill extrasmall">
+                    {{ variante.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-xs shadow-none">
+                    <button class="btn btn-xs btn-outline-primary border-0 p-1" @click="openModal(variante)" title="Editar Variante">
+                      <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <button class="btn btn-xs btn-outline-danger border-0 p-1" @click="handleDelete(variante)" title="Eliminar Variante">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
             <tr v-if="productStore.paginatedProducts.length === 0 && !loading">
               <td colspan="8" class="text-center py-5 text-muted">
                 <i class="fas fa-box-open fa-3x mb-3 opacity-25"></i>
@@ -322,16 +395,29 @@ const handleDelete = async (producto) => {
           <form @submit.prevent="saveProduct">
             <div class="modal-body p-4">
               <div class="row g-3">
-                <div class="col-md-8">
+                <div class="col-md-5">
                   <label class="form-label fw-bold small">Nombre del Producto</label>
-                  <input v-model="form.nombre" type="text" class="form-control rounded-3" required placeholder="Ej. Pan de Molde">
+                  <input v-model="form.nombre" type="text" class="form-control rounded-3" required placeholder="Ej. Torta Selva Negra">
                 </div>
                 <div class="col-md-4">
+                  <label class="form-label fw-bold small">Variante / Presentación</label>
+                  <input v-model="form.nombre_variante" type="text" class="form-control rounded-3" placeholder="Ej. Redonda 1KG, Tajada">
+                </div>
+                <div class="col-md-3">
                   <label class="form-label fw-bold small">Código / SKU</label>
                   <input v-model="form.codigo" type="text" class="form-control rounded-3" placeholder="Opcional">
                 </div>
                 
-                <div class="col-md-6">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold small">Producto Padre (Opcional)</label>
+                  <select v-model="form.parent_id" class="form-select rounded-3">
+                    <option value="">Ninguno (Es producto Principal)</option>
+                    <option v-for="p in productStore.products.filter(pr => pr.id !== currentId && !pr.parent_id)" :key="p.id" :value="p.id">
+                      {{ p.nombre }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-md-4">
                   <label class="form-label fw-bold small">Categoría</label>
                   <select v-model="form.categoria_id" class="form-select rounded-3" required>
                     <option value="" disabled>Seleccione una categoría</option>
@@ -498,5 +584,16 @@ const handleDelete = async (producto) => {
 .form-control:focus, .form-select:focus {
   border-color: #d97706;
   box-shadow: 0 0 0 0.25rem rgba(217, 119, 6, 0.1);
+}
+.italic { font-style: italic; }
+
+.btn-xs {
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+}
+
+.btn-group-xs > .btn {
+  padding: 0.1rem 0.3rem;
+  font-size: 0.7rem;
 }
 </style>

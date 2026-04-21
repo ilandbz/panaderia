@@ -16,7 +16,9 @@ class Producto extends Model
     protected $fillable = [
         'codigo',
         'nombre',
+        'nombre_variante',
         'descripcion',
+        'parent_id',
         'categoria_id',
         'tipo',
         'precio_venta',
@@ -56,6 +58,16 @@ class Producto extends Model
     public function lotes(): HasMany
     {
         return $this->hasMany(Lote::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Producto::class, 'parent_id');
+    }
+
+    public function variantes(): HasMany
+    {
+        return $this->hasMany(Producto::class, 'parent_id');
     }
 
     public function scopeActivos($query)
