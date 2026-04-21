@@ -94,5 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/permissions', [RoleController::class, 'permissions']);
 
     // Sucursales (Gestión)
-    Route::apiResource('sucursales', SucursalController::class)->except(['index']);
+    Route::apiResource('sucursales', SucursalController::class)->except(['index'])->parameters([
+        'sucursales' => 'sucursal'
+    ]);
 });

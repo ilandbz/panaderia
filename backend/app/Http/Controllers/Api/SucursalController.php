@@ -37,6 +37,9 @@ class SucursalController extends Controller
             'serie_boleta'        => 'required|string|size:4|starts_with:B',
             'serie_factura'       => 'required|string|size:4|starts_with:F',
             'serie_nota_credito'  => 'required|string|size:4',
+            'telefono'            => 'nullable|string|max:20',
+            'ubigueo'             => 'nullable|string|size:6',
+            'principal'           => 'boolean',
             'activo'              => 'boolean',
         ]);
 
@@ -72,6 +75,9 @@ class SucursalController extends Controller
             'serie_boleta'        => 'required|string|size:4|starts_with:B',
             'serie_factura'       => 'required|string|size:4|starts_with:F',
             'serie_nota_credito'  => 'required|string|size:4',
+            'telefono'            => 'nullable|string|max:20',
+            'ubigueo'             => 'nullable|string|size:6',
+            'principal'           => 'boolean',
             'activo'              => 'boolean',
         ]);
 
