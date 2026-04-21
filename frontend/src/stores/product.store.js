@@ -18,6 +18,40 @@ export const useProductStore = defineStore('product', {
         loading: false,
     }),
 
+    getters: {
+        /**
+         * Retorna los productos filtrados según el estado de filters
+         */
+        filteredProducts: (state) => {
+            return state.products.filter(p => {
+                const matchesSearch = !state.filters.search || 
+                    p.nombre.toLowerCase().includes(state.filters.search.toLowerCase()) || 
+                    (p.codigo && p.codigo.toLowerCase().includes(state.filters.search.toLowerCase()));
+                
+                const matchesCat = !state.filters.categoria_id || 
+                    p.categoria_id == state.filters.categoria_id;
+                
+                return matchesSearch && matchesCat;
+            });
+        },
+
+        /**
+         * Retorna los productos ya filtrados y paginados para la vista actual
+         */
+        paginatedProducts() {
+            const filtered = this.filteredProducts;
+            const start = (this.pagination.current_page - 1) * this.pagination.per_page;
+            return filtered.slice(start, start + this.pagination.per_page);
+        },
+
+        /**
+         * Calcula el total de páginas basado en los productos filtrados
+         */
+        totalPages() {
+            return Math.ceil(this.filteredProducts.length / this.pagination.per_page);
+        }
+    },
+
     actions: {
         async fetchProducts(params = null) {
             this.loading = true;
@@ -29,36 +63,26 @@ export const useProductStore = defineStore('product', {
                     if (params.page !== undefined) this.pagination.current_page = params.page;
                 }
 
-                // Usamos los filtros registrados en el estado
+                // Para unificación, pedimos 'all' por defecto si no se especifica lo contrario
                 const queryParams = {
-                    search: this.filters.search,
-                    categoria_id: this.filters.categoria_id,
-                    page: this.pagination.current_page,
-                    per_page: this.pagination.per_page,
-                    ...params // Permitir overrides puntuales
+                    all: true,
+                    ...params
                 };
 
                 const response = await api.get('/productos', { params: queryParams });
-                // En el interceptor ya tenemos response.data (el JSON {success, data, message})
-                const apiData = response.data; // Esto es el paginador de Laravel: { current_page, data: [], total, ... }
+                const apiData = response.data;
 
                 if (apiData && Array.isArray(apiData.data)) {
-                    // Si viene la estructura de Laravel Paginate
+                    // Si viene la estructura de Laravel Paginate (backend paginated)
                     this.products = apiData.data;
-                    this.pagination = {
-                        current_page: apiData.current_page,
-                        last_page: apiData.last_page,
-                        total: apiData.total,
-                        per_page: apiData.per_page,
-                    };
+                    this.pagination.total = apiData.total;
+                    this.pagination.last_page = apiData.last_page;
+                    this.pagination.current_page = apiData.current_page;
                 } else if (Array.isArray(apiData)) {
-                    // Si viene un array simple (fallback)
+                    // Si viene un array simple (full list para frontend paginated)
                     this.products = apiData;
-                    this.pagination.total = apiData.length;
-                    this.pagination.last_page = 1;
-                } else if (Array.isArray(response)) {
-                    // Si el interceptor no devolvió .data y recibimos el array directamente
-                    this.products = response;
+                    // No sobreescribimos total/last_page aquí, los getters se encargarán
+                    // de la visualización reactiva basada en filteredProducts
                 } else {
                     this.products = [];
                 }

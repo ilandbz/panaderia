@@ -13,7 +13,7 @@ class ProductoService
     {
         $sucursal_id = $filtros['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
 
-        $query = Producto::with(['categoria', 'sucursales' => function($q) use ($sucursal_id) {
+        $query = Producto::with(['categoria', 'sucursales' => function ($q) use ($sucursal_id) {
             $q->where('sucursales.id', $sucursal_id);
         }]);
 
@@ -23,10 +23,24 @@ class ProductoService
 
         if (isset($filtros['search'])) {
             $searchTerm = $filtros['search'];
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->where('nombre', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('codigo', 'like', '%' . $searchTerm . '%');
+                    ->orWhere('codigo', 'like', '%' . $searchTerm . '%');
             });
+        }
+
+        // Si se pide 'all', devolvemos todo el listado sin paginar
+        if (isset($filtros['all']) && ($filtros['all'] === 'true' || $filtros['all'] === true)) {
+            $productos = $query->get();
+            
+            $productos->transform(function ($producto) {
+                $sucursal = $producto->sucursales->first();
+                $producto->stock = $sucursal ? $sucursal->pivot->stock : 0;
+                $producto->stock_minimo = $sucursal ? $sucursal->pivot->stock_minimo : 0;
+                return $producto;
+            });
+            
+            return $productos;
         }
 
         $productos = $query->paginate($filtros['per_page'] ?? 15);
@@ -46,7 +60,7 @@ class ProductoService
     {
         return DB::transaction(function () use ($data) {
             $sucursal_id = $data['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
-            
+
             // Extraer datos de stock para la tabla pivot
             $stockInicial = $data['stock'] ?? 0;
             $stockMinimo = $data['stock_minimo'] ?? 0;
@@ -55,7 +69,7 @@ class ProductoService
             unset($data['stock'], $data['stock_minimo'], $data['sucursal_id']);
 
             $producto = Producto::create($data);
-            
+
             // Registrar en la sucursal activa
             $producto->sucursales()->attach($sucursal_id, [
                 'stock' => $stockInicial,
@@ -74,7 +88,7 @@ class ProductoService
                     'motivo'         => 'inventario_inicial',
                 ]);
             }
-            
+
             return $producto;
         });
     }
@@ -83,11 +97,11 @@ class ProductoService
     {
         return DB::transaction(function () use ($producto, $data) {
             $sucursal_id = $data['sucursal_id'] ?? config('app.sucursal_id') ?? auth()->user()->sucursal_id;
-            
+
             // Obtener stock actual en la sucursal
             $pivot = $producto->sucursales()->where('sucursal_id', $sucursal_id)->first();
             $stockAnterior = $pivot ? $pivot->pivot->stock : 0;
-            
+
             $cantidad = $data['cantidad'];
             $tipo = $data['tipo']; // ingreso o egreso
             $nuevoStock = ($tipo === 'ingreso') ? ($stockAnterior + $cantidad) : ($stockAnterior - $cantidad);

@@ -16,8 +16,6 @@ const clienteStore = useClienteStore();
 const loadingPdf = ref(false);
 const search = ref('');
 const selectedCategory = ref(0);
-const currentPage = ref(1);
-const perPage = 8;
 const cart = ref([]);
 const tipoComprobante = ref('ticket');
 const conIgv = ref(false);
@@ -56,11 +54,25 @@ const handleKeydown = (event) => {
 };
 
 onMounted(async () => {
-  await productStore.fetchProducts();
+  // Configurar paginación para POS
+  productStore.pagination.per_page = 12;
+  productStore.pagination.current_page = 1;
+  
+  await productStore.fetchProducts({ all: true });
   await productStore.fetchCategories();
   await cajaStore.fetchEstadoCaja();
   await inicializarClienteDefecto();
   window.addEventListener('keydown', handleKeydown);
+});
+
+watch(search, (val) => {
+    productStore.filters.search = val;
+    productStore.pagination.current_page = 1;
+});
+
+watch(selectedCategory, (val) => {
+    productStore.filters.categoria_id = val === 0 ? '' : val;
+    productStore.pagination.current_page = 1;
 });
 
 const inicializarClienteDefecto = async () => {
@@ -123,24 +135,11 @@ const categories = computed(() => [
   ...productStore.categories
 ]);
 
-const filteredProducts = computed(() => {
-  return productStore.products.filter(p => {
-    const matchesSearch = p.nombre.toLowerCase().includes(search.value.toLowerCase()) || 
-                          (p.codigo && p.codigo.toLowerCase().includes(search.value.toLowerCase()));
-    const matchesCat = selectedCategory.value === 0 || p.categoria_id === selectedCategory.value;
-    return matchesSearch && matchesCat;
-  });
-});
+const totalPages = computed(() => productStore.totalPages);
 
-const totalPages = computed(() => Math.ceil(filteredProducts.value.length / perPage));
+const paginatedProducts = computed(() => productStore.paginatedProducts);
 
-const paginatedProducts = computed(() => {
-  const start = (currentPage.value - 1) * perPage;
-  return filteredProducts.value.slice(start, start + perPage);
-});
-
-// Reset page when filter changes
-watch([search, selectedCategory], () => { currentPage.value = 1; });
+// El reset de página ya lo manejamos en el watch de search/selectedCategory que actualizan el store
 
 const addToCart = (product) => {
   if (!cajaStore.isCajaAbierta) {
@@ -359,20 +358,20 @@ const nuevaVenta = () => {
             <!-- Paginación -->
             <div v-if="totalPages > 1" class="d-flex align-items-center justify-content-between mt-4 pb-2">
               <span class="small text-muted">
-                Mostrando {{ (currentPage - 1) * perPage + 1 }}–{{ Math.min(currentPage * perPage, filteredProducts.length) }} de {{ filteredProducts.length }} productos
+                Mostrando {{ (productStore.pagination.current_page - 1) * productStore.pagination.per_page + 1 }}–{{ Math.min(productStore.pagination.current_page * productStore.pagination.per_page, productStore.filteredProducts.length) }} de {{ productStore.filteredProducts.length }} productos
               </span>
               <nav aria-label="Navegación de productos">
                 <ul class="pagination pagination-sm mb-0">
-                  <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                    <button class="page-link rounded-start-pill" @click="currentPage--" :disabled="currentPage === 1">
+                  <li class="page-item" :class="{ disabled: productStore.pagination.current_page === 1 }">
+                    <button class="page-link rounded-start-pill" @click="productStore.pagination.current_page--" :disabled="productStore.pagination.current_page === 1">
                       <i class="fas fa-chevron-left"></i>
                     </button>
                   </li>
-                  <li v-for="page in totalPages" :key="page" class="page-item" :class="{ active: currentPage === page }">
-                    <button class="page-link" @click="currentPage = page">{{ page }}</button>
+                  <li v-for="page in totalPages" :key="page" class="page-item" :class="{ active: productStore.pagination.current_page === page }">
+                    <button class="page-link" @click="productStore.pagination.current_page = page">{{ page }}</button>
                   </li>
-                  <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                    <button class="page-link rounded-end-pill" @click="currentPage++" :disabled="currentPage === totalPages">
+                  <li class="page-item" :class="{ disabled: productStore.pagination.current_page === totalPages }">
+                    <button class="page-link rounded-end-pill" @click="productStore.pagination.current_page++" :disabled="productStore.pagination.current_page === totalPages">
                       <i class="fas fa-chevron-right"></i>
                     </button>
                   </li>

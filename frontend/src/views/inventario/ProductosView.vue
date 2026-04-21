@@ -34,36 +34,29 @@ const form = ref({
   activo: true
 });
 
-let searchTimeout = null;
-
-const fetchProducts = async (page = 1) => {
-  loading.value = true;
-  await productStore.fetchProducts({
-    search: search.value,
-    categoria_id: categoryFilter.value,
-    page: page
-  });
-  loading.value = false;
+const changePage = (page) => {
+  if (page >= 1 && page <= productStore.totalPages) {
+     productStore.pagination.current_page = page;
+     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 };
 
 onMounted(async () => {
-  fetchProducts();
-  await productStore.fetchCategories();
+    loading.value = true;
+    await productStore.fetchProducts({ all: true });
+    await productStore.fetchCategories();
+    loading.value = false;
 });
 
-watch([search, categoryFilter], () => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    fetchProducts(1);
-  }, 400);
+watch(search, (val) => {
+    productStore.filters.search = val;
+    productStore.pagination.current_page = 1;
 });
 
-const changePage = (page) => {
-  if (page >= 1 && page <= productStore.pagination.last_page) {
-    fetchProducts(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-};
+watch(categoryFilter, (val) => {
+    productStore.filters.categoria_id = val;
+    productStore.pagination.current_page = 1;
+});
 
 const openModal = (producto = null) => {
   if (producto) {
@@ -232,7 +225,7 @@ const handleDelete = async (producto) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="producto in productStore.products" :key="producto?.id">
+            <tr v-for="producto in productStore.paginatedProducts" :key="producto?.id">
               <td><span class="badge bg-light text-dark font-monospace border">{{ producto.codigo || 'S/N' }}</span></td>
               <td class="fw-bold text-dark">{{ producto.nombre }}</td>
               <td>
@@ -274,7 +267,7 @@ const handleDelete = async (producto) => {
                 </div>
               </td>
             </tr>
-            <tr v-if="productStore.products.length === 0 && !loading">
+            <tr v-if="productStore.paginatedProducts.length === 0 && !loading">
               <td colspan="8" class="text-center py-5 text-muted">
                 <i class="fas fa-box-open fa-3x mb-3 opacity-25"></i>
                 <p>No se encontraron productos.</p>
@@ -285,18 +278,18 @@ const handleDelete = async (producto) => {
       </div>
 
       <!-- Paginación -->
-      <div v-if="productStore.pagination.total > 0" class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 gap-3">
+      <div v-if="productStore.filteredProducts.length > 0" class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 gap-3">
         <div class="text-muted small order-2 order-md-1">
-          Mostrando {{ productStore.products.length }} de <strong>{{ productStore.pagination.total }}</strong> productos registrados
+          Mostrando {{ productStore.paginatedProducts.length }} de <strong>{{ productStore.filteredProducts.length }}</strong> productos filtrados
         </div>
-        <nav v-if="productStore.pagination.last_page > 1" class="order-1 order-md-2">
+        <nav v-if="productStore.totalPages > 1" class="order-1 order-md-2">
           <ul class="pagination pagination-sm m-0">
             <li class="page-item" :class="{ disabled: productStore.pagination.current_page === 1 }">
               <button class="btn btn-sm btn-outline-primary rounded-pill me-2" @click="changePage(productStore.pagination.current_page - 1)" :disabled="productStore.pagination.current_page === 1">
                 <i class="fas fa-chevron-left"></i>
               </button>
             </li>
-            <li v-for="page in productStore.pagination.last_page" :key="page" class="page-item mx-1">
+            <li v-for="page in productStore.totalPages" :key="page" class="page-item mx-1">
               <button 
                 class="btn btn-sm rounded-pill px-3" 
                 :class="productStore.pagination.current_page === page ? 'btn-primary' : 'btn-light'"
@@ -305,8 +298,8 @@ const handleDelete = async (producto) => {
                 {{ page }}
               </button>
             </li>
-            <li class="page-item" :class="{ disabled: productStore.pagination.current_page === productStore.pagination.last_page }">
-              <button class="btn btn-sm btn-outline-primary rounded-pill ms-2" @click="changePage(productStore.pagination.current_page + 1)" :disabled="productStore.pagination.current_page === productStore.pagination.last_page">
+            <li class="page-item" :class="{ disabled: productStore.pagination.current_page === productStore.totalPages }">
+              <button class="btn btn-sm btn-outline-primary rounded-pill ms-2" @click="changePage(productStore.pagination.current_page + 1)" :disabled="productStore.pagination.current_page === productStore.totalPages">
                 <i class="fas fa-chevron-right"></i>
               </button>
             </li>
