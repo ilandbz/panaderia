@@ -352,8 +352,10 @@ const nuevaVenta = () => {
                         </span>
                     </div>
                     <div class="card-img-top p-4 text-center bg-light-subtle rounded-top-4">
-                     <i class="fas fa-3x text-primary opacity-25" :class="product.categoria.icono"></i>
-                     <span v-if="product.stock <= 0 && !product.variantes?.length" class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm">SIN STOCK</span>
+                     <i class="fas fa-3x opacity-25" :class="product.categoria.icono" :style="{color: product.categoria.color}"></i>
+                     <span v-if="product.stock <= 0 && !product.variantes?.length"
+                     class="position-absolute top-50 start-50 translate-middle badge bg-danger-subtle text-danger px-3 py-2 rounded-pill shadow-sm"
+                     >SIN STOCK</span>
                   </div>
                   <div class="card-body p-3 text-center">
                     <div class="small fw-bold text-truncate text-dark mb-1">{{ product.nombre }}</div>
