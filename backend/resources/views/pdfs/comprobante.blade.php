@@ -224,7 +224,7 @@
     $comprobante = $venta?->comprobante;
 
     $serieNumero = $comprobante
-        ? trim(($comprobante->serie ?? '') . '-' . ($comprobante->numero ?? ''))
+        ? ($comprobante->numero_comprobante ?? ($comprobante->serie . '-' . str_pad($comprobante->correlativo, 8, '0', STR_PAD_LEFT)))
         : strtoupper($venta->tipo_comprobante ?? 'COMPROBANTE') . ' SIN SERIE';
 
     $tipoComprobante = strtoupper($venta->tipo_comprobante ?? 'COMPROBANTE');

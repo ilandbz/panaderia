@@ -22,6 +22,7 @@ const clienteStore = useClienteStore();
 const formatoImpresion = ref('80mm');
 const pdfUrl = ref('');
 const loadingPdf = ref(false);
+const processingComprobante = ref(false);
 
 const searchCliente = ref('');
 const clientesEncontrados = ref([]);
@@ -36,9 +37,18 @@ const esBoleta = computed(() => tipoComprobante.value === 'boleta');
 const esFactura = computed(() => tipoComprobante.value === 'factura');
 const estadoSunat = computed(() => props.venta?.comprobante?.estado_sunat || 'pendiente');
 
-const puedeGenerarComprobante = computed(() => {
-  // Se puede generar si es ticket O si el comprobante actual no fue aceptado por SUNAT
-  return esTicket.value || estadoSunat.value !== 'aceptado';
+const puedeGenerarBoleta = computed(() => {
+  if (processingComprobante.value) return false;
+  if (esFactura.value) return false; // Ya es factura, bloquear boleta
+  // Se permite si es ticket o si es boleta pero fue rechazada (reintento)
+  return esTicket.value || (esBoleta.value && estadoSunat.value !== 'aceptado');
+});
+
+const puedeGenerarFactura = computed(() => {
+  if (processingComprobante.value) return false;
+  if (esBoleta.value) return false; // Ya es boleta, bloquear factura
+  // Se permite si es ticket o si es factura pero fue rechazada (reintento)
+  return esTicket.value || (esFactura.value && estadoSunat.value !== 'aceptado');
 });
 
 const cargarPdf = async () => {
@@ -95,12 +105,16 @@ const generarComprobante = async (tipo) => {
   });
 
   try {
+    processingComprobante.value = true;
     Swal.showLoading();
     const result = await ventaStore.generarComprobante(props.venta.id, tipo, formatoImpresion.value);
     
-    // Suponiendo que el backend devuelve la venta actualizada o éxito
-    // Actualizamos localmente para reflejar el cambio en la UI del modal
-    props.venta.tipo_comprobante = tipo;
+    // Sincronizar el objeto local con la respuesta del servidor para actualizar la UI (botones, estado SUNAT)
+    const ventaActualizada = result.data?.data || result.data || result;
+    if (ventaActualizada && ventaActualizada.id) {
+        props.venta.tipo_comprobante = ventaActualizada.tipo_comprobante;
+        props.venta.comprobante = ventaActualizada.comprobante;
+    }
     
     toast.fire({
       icon: 'success',
@@ -111,6 +125,8 @@ const generarComprobante = async (tipo) => {
     await cargarPdf();
   } catch (error) {
     Swal.fire('Error', error.response?.data?.message || `No se pudo generar la ${tipo}`, 'error');
+  } finally {
+    processingComprobante.value = false;
   }
 };
 
@@ -278,7 +294,7 @@ const cerrar = () => {
                       <button
                         class="btn py-2 rounded-3 w-100 fw-bold border-2 small"
                         :class="esBoleta ? 'btn-primary' : 'btn-outline-secondary'"
-                        :disabled="!puedeGenerarComprobante"
+                        :disabled="!puedeGenerarBoleta"
                         @click="generarComprobante('boleta')"
                       >
                         {{ esBoleta && estadoSunat === 'rechazado' ? 'REINTENTAR BOLETA' : 'BOLETA' }}
@@ -288,7 +304,7 @@ const cerrar = () => {
                       <button
                         class="btn py-2 rounded-3 w-100 fw-bold border-2 small"
                         :class="esFactura ? 'btn-primary' : 'btn-outline-secondary'"
-                        :disabled="!puedeGenerarComprobante"
+                        :disabled="!puedeGenerarFactura"
                         @click="generarComprobante('factura')"
                       >
                         {{ esFactura && estadoSunat === 'rechazado' ? 'REINTENTAR FACTURA' : 'FACTURA' }}
