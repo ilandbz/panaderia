@@ -7,8 +7,8 @@ import AjusteStockModal from '@/components/inventario/AjusteStockModal.vue';
 import { useModal } from '@/composables/useModal';
 
 const productStore = useProductStore();
-const search = ref('');
-const categoryFilter = ref('');
+const search = ref(productStore.filters.search);
+const categoryFilter = ref(productStore.filters.categoria_id);
 const loading = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
@@ -180,24 +180,40 @@ const handleDelete = async (producto) => {
       </div>
 
       <div class="row g-3 mb-4">
-        <div class="col-md-8">
-           <div class="input-group search-box">
-             <span class="input-group-text bg-light border-0"><i class="fas fa-search"></i></span>
+        <div class="col-lg-5">
+           <div class="input-group search-box shadow-sm">
+             <span class="input-group-text bg-white border-0 text-muted"><i class="fas fa-search"></i></span>
              <input
                v-model="search"
                type="text"
-               class="form-control border-0 bg-light"
+               class="form-control border-0 bg-white"
                placeholder="Buscar por nombre o código..."
              >
            </div>
          </div>
-         <div class="col-md-4">
-            <select v-model="categoryFilter" class="form-select border-0 bg-light">
-              <option value="">Todas las Categorías</option>
-              <option v-for="cat in productStore.categories" :key="cat.id" :value="cat.id">
-                {{ cat.nombre }}
-              </option>
-            </select>
+         <div class="col-lg-7">
+            <div class="category-filters d-flex gap-2 overflow-auto pb-2 scrollbar-hidden">
+                <button 
+                  class="btn category-btn" 
+                  :class="categoryFilter === '' ? 'active' : ''"
+                  @click="categoryFilter = ''"
+                >
+                  <i class="fas fa-th-large me-2"></i> Todas
+                </button>
+                <button 
+                  v-for="cat in productStore.categories" 
+                  :key="cat.id"
+                  class="btn category-btn"
+                  :class="categoryFilter == cat.id ? 'active' : ''"
+                  @click="categoryFilter = cat.id"
+                >
+                  <i v-if="cat.nombre.toLowerCase().includes('pan')" class="fas fa-wheat-awn me-2"></i>
+                  <i v-else-if="cat.nombre.toLowerCase().includes('pastel')" class="fas fa-cake-candles me-2"></i>
+                  <i v-else-if="cat.nombre.toLowerCase().includes('abarro')" class="fas fa-box me-2"></i>
+                  <i v-else :class="['fas', cat.icono || 'fa-tag', 'me-2']"></i>
+                  {{ cat.nombre }}
+                </button>
+            </div>
          </div>
       </div>
 
@@ -443,8 +459,37 @@ const handleDelete = async (producto) => {
 .text-primary { color: #d97706 !important; }
 .bg-primary { background-color: #d97706 !important; }
 
-.search-box .input-group-text { border-radius: 10px 0 0 10px; }
-.search-box .form-control { border-radius: 0 10px 10px 0; }
+.search-box { border: 1px solid #e5e7eb; border-radius: 12px; }
+.search-box .input-group-text { border-radius: 12px 0 0 12px; }
+.search-box .form-control { border-radius: 0 12px 12px 0; }
+
+.category-filters::-webkit-scrollbar { display: none; }
+.scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+
+.category-btn {
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+  border-radius: 12px;
+  padding: 0.6rem 1.25rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.category-btn:hover {
+  background-color: #f9fafb;
+  border-color: #d97706;
+  color: #d97706;
+}
+
+.category-btn.active {
+  background-color: #d97706;
+  border-color: #d97706;
+  color: #fff;
+  box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.2);
+}
 
 .table thead th {
   font-weight: 600;
@@ -452,6 +497,8 @@ const handleDelete = async (producto) => {
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   color: #6b7280;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #edf2f7;
 }
 
 .card { border-radius: 1.25rem; }

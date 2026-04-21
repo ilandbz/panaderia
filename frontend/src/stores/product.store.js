@@ -9,16 +9,36 @@ export const useProductStore = defineStore('product', {
             current_page: 1,
             last_page: 1,
             total: 0,
-            per_page: 15,
+            per_page: 20,
+        },
+        filters: {
+            search: '',
+            categoria_id: '',
         },
         loading: false,
     }),
 
     actions: {
-        async fetchProducts(params = {}) {
+        async fetchProducts(params = null) {
             this.loading = true;
             try {
-                const response = await api.get('/productos', { params });
+                // Si se pasan parámetros, actualizamos los filtros locales
+                if (params) {
+                    if (params.search !== undefined) this.filters.search = params.search;
+                    if (params.categoria_id !== undefined) this.filters.categoria_id = params.categoria_id;
+                    if (params.page !== undefined) this.pagination.current_page = params.page;
+                }
+
+                // Usamos los filtros registrados en el estado
+                const queryParams = {
+                    search: this.filters.search,
+                    categoria_id: this.filters.categoria_id,
+                    page: this.pagination.current_page,
+                    per_page: this.pagination.per_page,
+                    ...params // Permitir overrides puntuales
+                };
+
+                const response = await api.get('/productos', { params: queryParams });
                 // En el interceptor ya tenemos response.data (el JSON {success, data, message})
                 const apiData = response.data; // Esto es el paginador de Laravel: { current_page, data: [], total, ... }
 
