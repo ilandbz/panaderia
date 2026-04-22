@@ -61,7 +61,7 @@ onMounted(async () => {
   productStore.pagination.per_page = 12;
   productStore.pagination.current_page = 1;
   
-  await productStore.fetchProducts({ all: true });
+  await productStore.fetchProducts({ all: true, activos: true });
   await productStore.fetchCategories();
   await cajaStore.fetchEstadoCaja();
   await inicializarClienteDefecto();

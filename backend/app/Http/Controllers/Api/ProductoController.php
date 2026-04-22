@@ -23,6 +23,7 @@ class ProductoController extends Controller
         return $this->successResponse($productos);
     }
 
+
     public function store(Request $request)
     {
         $data = $request->validate([

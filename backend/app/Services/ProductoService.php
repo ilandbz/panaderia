@@ -26,6 +26,11 @@ class ProductoService
             $query->where('categoria_id', $filtros['categoria_id']);
         }
 
+        // Filtro para traer solo activos (Ideal para el POS)
+        if (isset($filtros['activos']) && ($filtros['activos'] === 'true' || $filtros['activos'] === true || $filtros['activos'] == 1)) {
+            $query->where('activo', 1);
+        }
+
         if (isset($filtros['search'])) {
             $searchTerm = $filtros['search'];
             $query->where(function ($q) use ($searchTerm) {
