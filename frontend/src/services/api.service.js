@@ -18,19 +18,6 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Interceptor para manejar errores globales (ej: 401)
-// api.interceptors.response.use(
-//     (response) => response.data,
-//     (error) => {
-//         if (error.response?.status === 401) {
-//             const authStore = useAuthStore();
-//             authStore.logout();
-//         }
-//         return Promise.reject(error.response?.data || error);
-//     }
-// );
-
-
 api.interceptors.response.use(
     (response) => response.data,
     (error) => {

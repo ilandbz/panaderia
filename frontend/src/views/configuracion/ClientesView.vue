@@ -110,6 +110,15 @@ const eliminarCliente = async (cliente) => {
 const canEdit = computed(() => authStore.hasPermission('editar clientes'));
 const canCreate = computed(() => authStore.hasPermission('crear clientes'));
 
+const buscarEntidad = async () => {
+    const response = await clienteStore.buscarEntidad({
+        numero_documento: form.value.numero_documento,
+        tipo_documento: form.value.tipo_documento
+    });
+    form.value.nombre_completo = response.razon_social;
+    form.value.razon_social = response.razon_social;
+}
+
 onMounted(() => {
     fetchClientes();
 });
@@ -251,7 +260,7 @@ onMounted(() => {
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold small text-uppercase">Número Documento</label>
-                                    <input v-model="form.numero_documento" type="text" class="form-control border-light-subtle bg-light" required>
+                                    <input v-model="form.numero_documento" type="text" class="form-control border-light-subtle bg-light" @blur="buscarEntidad" required>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label fw-bold small text-uppercase">Nombre Completo</label>

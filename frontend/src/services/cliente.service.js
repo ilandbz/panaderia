@@ -15,6 +15,9 @@ const ClienteService = {
   },
   deleteCliente(id) {
     return api.delete(`/clientes/${id}`);
+  },
+  buscarEntidad(data) {
+    return api.post('/clientes/buscar-entidad', data);
   }
 };
 

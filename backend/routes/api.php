@@ -85,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Clientes
     Route::apiResource('clientes', ClienteController::class);
+    Route::post('/clientes/buscar-entidad', [ClienteController::class, 'mostrarPorDniRucconApi']);
 
     // Configuración: Usuarios & Roles
     Route::apiResource('users', UserController::class)->except(['show']);

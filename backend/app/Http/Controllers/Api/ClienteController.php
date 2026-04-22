@@ -8,16 +8,43 @@ use Illuminate\Http\Request;
 
 class ClienteController extends Controller
 {
+    public function mostrarPorDniRucconApi(Request $request)
+    {
+        $cliente = Cliente::where('numero_documento', $request->numero_documento)->first();
+        if ($cliente) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El cliente ya existe',
+                'data' => $cliente
+            ], 409);
+        }
+        if ($request->tipo_documento == 'DNI') {
+            $response = obtenerDatosDniRuc('dni', $request->numero_documento);
+        } else {
+            $response = obtenerDatosDniRuc('ruc', $request->numero_documento);
+        }
+
+        if ($response->status() == 200) {
+            $data = $response->json();
+
+            $cliente = [
+                'numero_documento' => $data['document_number'],
+                'tipo_documento' => $request->tipo_documento,
+                'razon_social' => $data['full_name'],
+            ];
+            return response()->json($cliente, 201);
+        }
+    }
     public function index(Request $request)
     {
         $query = Cliente::query();
-        
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('nombre_completo', 'like', "%{$search}%")
-                  ->orWhere('numero_documento', 'like', "%{$search}%")
-                  ->orWhere('razon_social', 'like', "%{$search}%");
+                    ->orWhere('numero_documento', 'like', "%{$search}%")
+                    ->orWhere('razon_social', 'like', "%{$search}%");
             });
         }
 
@@ -77,7 +104,7 @@ class ClienteController extends Controller
     public function destroy($id)
     {
         $cliente = Cliente::findOrFail($id);
-        
+
         // Verificar si tiene ventas asociadas si queremos evitar el borrado físico (aunque use SoftDeletes)
         // Por ahora, usamos SoftDeletes de Eloquent.
         $cliente->delete();

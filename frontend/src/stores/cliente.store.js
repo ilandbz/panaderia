@@ -72,6 +72,15 @@ export const useClienteStore = defineStore('cliente', {
       } finally {
         this.loading = false;
       }
+    },
+    async buscarEntidad(data) {
+      this.loading = true;
+      try {
+        const response = await ClienteService.buscarEntidad(data);
+        return response;
+      } finally {
+        this.loading = false;
+      }
     }
   }
 });

@@ -450,8 +450,8 @@ const nuevaVenta = () => {
           </div>
 
           <div class="cart-footer p-4 bg-light-subtle border-top">
-            <!-- Client Selection -->
-            <div class="client-selection mb-4 p-3 bg-white rounded-4 shadow-sm border border-dashed">
+
+            <!-- <div class="client-selection mb-4 p-3 bg-white rounded-4 shadow-sm border border-dashed">
                <div class="d-flex align-items-center justify-content-between mb-2">
                   <span class="small fw-bold text-dark"><i class="fas fa-user me-1 text-primary"></i> Cliente</span>
                   <button class="btn btn-xs btn-link p-0 text-primary small text-decoration-none fw-bold" @click="showClienteModal">+ Nuevo</button>
@@ -474,7 +474,7 @@ const nuevaVenta = () => {
                     </div>
                   </div>
                </div>
-            </div>
+            </div> -->
 
             <div class="sale-options mb-4 p-3 bg-white rounded-4 shadow-sm border border-dashed">
               <div class="d-flex align-items-center justify-content-between mb-3">
