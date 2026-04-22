@@ -210,8 +210,8 @@
 
             <div class="info-business">
                 <div><span class="fw-bold">RUC:</span> {{ config('empresa.ruc') }}</div>
-                <div>{{ config('empresa.direccion') }}</div>
-                <div>WhatsApp: {{ config('empresa.celular') }}</div>
+                <div>{{ $venta->sucursal->direccion ?? config('empresa.direccion') }}</div>
+                <div>WhatsApp: {{ $venta->sucursal->telefono ?? config('empresa.celular') }}</div>
             </div>
         </div>
 
