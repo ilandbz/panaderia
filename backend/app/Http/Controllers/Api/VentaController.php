@@ -56,6 +56,7 @@ class VentaController extends Controller
             'igv'               => 'nullable|numeric',
             'total'             => 'required|numeric',
             'monto_pagado'      => 'required|numeric',
+            'vuelto'            => 'nullable|numeric',
             'forma_pago'        => 'required|string',
             'items'             => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
