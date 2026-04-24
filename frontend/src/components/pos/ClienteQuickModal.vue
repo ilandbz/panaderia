@@ -39,6 +39,15 @@ const resetForm = () => {
   form.direccion = ''
 }
 
+const buscarEntidad = async () => {
+    const response = await clienteStore.buscarEntidad({
+        numero_documento: form.numero_documento,
+        tipo_documento: form.tipo_documento
+    });
+    form.nombre_completo = response.nombre_completo;
+    form.razon_social = response.razon_social;
+}
+
 const save = async () => {
   if (!form.numero_documento || !form.nombre_completo) {
     Swal.fire('Error', 'Documento y Nombre son obligatorios', 'error')
@@ -111,6 +120,7 @@ const save = async () => {
                   class="form-control border-light bg-light"
                   placeholder="00000000"
                   required
+                  @blur="buscarEntidad"
                 >
               </div>
 
