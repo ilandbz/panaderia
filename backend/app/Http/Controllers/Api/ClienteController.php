@@ -30,6 +30,7 @@ class ClienteController extends Controller
             $cliente = [
                 'numero_documento' => $data['document_number'],
                 'tipo_documento' => $request->tipo_documento,
+                'nombre_completo' => $data['full_name'],
                 'razon_social' => $data['full_name'],
             ];
             return response()->json($cliente, 201);

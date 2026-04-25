@@ -9,10 +9,24 @@ use Illuminate\Support\Facades\Auth;
 
 class CompraService
 {
+    protected $cajaService;
+
+    public function __construct(CajaService $cajaService)
+    {
+        $this->cajaService = $cajaService;
+    }
+
     public function registrar(array $data)
     {
         return DB::transaction(function () use ($data) {
+            $usuario_id = Auth::id();
             $sucursal_id = $data['sucursal_id'] ?? Auth::user()->sucursal_id;
+
+            // Validar Caja
+            $saldoActual = $this->cajaService->obtenerSaldoActual($usuario_id, $sucursal_id);
+            if ($saldoActual < $data['total']) {
+                throw new \Exception("Saldo de caja insuficiente. Saldo actual: S/ " . number_format($saldoActual, 2) . ". Monto compra: S/ " . number_format($data['total'], 2));
+            }
 
             $ultimoId = Compra::withTrashed()->max('id') ?? 0;
             $numeroCompra = 'COMP-' . str_pad($ultimoId + 1, 6, '0', STR_PAD_LEFT);
@@ -63,6 +77,9 @@ class CompraService
                     'observacion'     => "Compra registrada: {$compra->numero_compra}",
                 ]);
             }
+
+            // Registrar Egreso en Caja
+            $this->cajaService->registrarEgresoCompra($compra);
 
             return $compra->load('detalles.producto', 'proveedor');
         });

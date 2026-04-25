@@ -17,6 +17,7 @@ class MovimientoCaja extends Model
         'apertura_caja_id',
         'usuario_id',
         'venta_id',
+        'compra_id',
         'tipo',
         'concepto',
         'monto',
@@ -41,5 +42,10 @@ class MovimientoCaja extends Model
     public function venta(): BelongsTo
     {
         return $this->belongsTo(Venta::class);
+    }
+
+    public function compra(): BelongsTo
+    {
+        return $this->belongsTo(Compra::class);
     }
 }

@@ -101,4 +101,44 @@ class CajaService
             'observacion'       => $data['observacion'] ?? null,
         ]);
     }
+
+    public function obtenerSaldoActual(int $usuario_id, int $sucursal_id): float
+    {
+        $apertura = AperturaCaja::where('estado', 'abierta')
+                                ->where('usuario_id', $usuario_id)
+                                ->where('sucursal_id', $sucursal_id)
+                                ->first();
+
+        if (!$apertura) {
+            return 0;
+        }
+
+        $ingresos = $apertura->movimientos()->where('tipo', 'ingreso')->sum('monto');
+        $egresos  = $apertura->movimientos()->where('tipo', 'egreso')->sum('monto');
+
+        return (float) ($apertura->monto_apertura + $ingresos - $egresos);
+    }
+
+    public function registrarEgresoCompra(\App\Models\Compra $compra)
+    {
+        $apertura = AperturaCaja::where('estado', 'abierta')
+                                ->where('usuario_id', $compra->usuario_id)
+                                ->where('sucursal_id', $compra->sucursal_id)
+                                ->first();
+
+        if (!$apertura) {
+            throw new \Exception('No hay una caja abierta para registrar el egreso de la compra.');
+        }
+
+        return MovimientoCaja::create([
+            'apertura_caja_id' => $apertura->id,
+            'usuario_id'        => $compra->usuario_id,
+            'compra_id'         => $compra->id,
+            'tipo'              => 'egreso',
+            'concepto'          => 'Pago de compra: ' . $compra->numero_compra,
+            'monto'             => $compra->total,
+            'forma_pago'        => 'efectivo',
+            'observacion'       => "Proveedor: {$compra->proveedor->razon_social}",
+        ]);
+    }
 }

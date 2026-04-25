@@ -576,7 +576,7 @@ const nuevaVenta = () => {
 
     <!-- Modal de Selección de Variantes -->
     <div class="modal fade no-print" id="variantModal" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content border-0 shadow-lg rounded-5 overflow-hidden">
           <div class="modal-header border-0 bg-primary text-white p-4">
              <h5 class="modal-title fw-bold"><i class="fas fa-layer-group me-2"></i> {{ selectedParent?.nombre }}</h5>
@@ -585,20 +585,22 @@ const nuevaVenta = () => {
           <div class="modal-body p-4 bg-light">
              <p class="text-muted small mb-4 fw-bold text-uppercase tracking-widest">Seleccione una presentación:</p>
              <div class="row g-3">
-                <div v-for="v in selectedParent?.variantes" :key="v.id" class="col-md-6">
+                <div v-for="v in selectedParent?.variantes" :key="v.id" class="col-6 col-md-4">
                     <div class="card variant-card border-0 rounded-4 shadow-sm h-100 cursor-pointer transition-all" 
                          :class="v.stock <= 0 ? 'opacity-50 grayscale' : 'hover-lift'"
                          @click="v.stock > 0 && addToCart(v)">
-                        <div class="card-body p-3">
+                        <div class="card-body p-2">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-dark">{{ v.nombre_variante }}</span>
-                                <span class="badge rounded-pill" :class="v.stock > 10 ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'">
+                                <span class="fw-bold text-dark small">{{ v.nombre_variante }}</span>
+                                <span class="badge rounded-pill small" :class="v.stock > 10 ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'">
                                     Stock: {{ v.stock }}
                                 </span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
-                                <span class="small text-muted">{{ v.codigo || 'S/N' }}</span>
-                                <span class="h5 fw-bold text-primary mb-0 font-monospace">S/ {{ v.precio_venta }}</span>
+                                <span class="small text-muted extrasmall">{{ v.codigo || 'S/N' }}</span>
+                                <span class="fw-bold text-primary mb-0 small font-monospace">
+                                  S/ {{ v.precio_venta }}
+                                </span>
                             </div>
                         </div>
                     </div>
