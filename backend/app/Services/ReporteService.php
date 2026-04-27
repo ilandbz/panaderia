@@ -168,18 +168,18 @@ class ReporteService
     public function ventasPorUsuario(string $desde, string $hasta): array
     {
         $rows = DB::table('ventas')
-            ->join('users', 'users.id', '=', 'ventas.usuario_id')
+            ->join('usuarios', 'usuarios.id', '=', 'ventas.usuario_id')
             ->whereBetween('ventas.created_at', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
             ->where('ventas.estado', 'completada')
             ->whereNull('ventas.deleted_at')
             ->select(
-                'users.id',
-                DB::raw("CONCAT(users.nombre, ' ', users.apellido) as vendedor"),
+                'usuarios.id',
+                DB::raw("CONCAT(usuarios.nombre, ' ', usuarios.apellido) as vendedor"),
                 DB::raw('COUNT(*) as cantidad_ventas'),
                 DB::raw('SUM(ventas.total) as total_vendido'),
                 DB::raw('AVG(ventas.total) as ticket_promedio'),
             )
-            ->groupBy('users.id', 'users.nombre', 'users.apellido')
+            ->groupBy('usuarios.id', 'usuarios.nombre', 'usuarios.apellido')
             ->orderByDesc('total_vendido')
             ->get();
 
@@ -348,8 +348,9 @@ class ReporteService
     public function exportarVentas(string $desde, string $hasta): array
     {
         return DB::table('ventas')
-            ->leftJoin('users', 'users.id', '=', 'ventas.usuario_id')
+            ->leftJoin('usuarios', 'usuarios.id', '=', 'ventas.usuario_id')
             ->leftJoin('clientes', 'clientes.id', '=', 'ventas.cliente_id')
+            ->leftJoin('comprobantes', 'comprobantes.venta_id', '=', 'ventas.id')
             ->whereBetween('ventas.created_at', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
             ->whereNull('ventas.deleted_at')
             ->select(
@@ -361,9 +362,9 @@ class ReporteService
                 'ventas.total',
                 'ventas.estado',
                 'ventas.tipo_comprobante',
-                'ventas.serie_comprobante',
-                'ventas.numero_comprobante',
-                DB::raw("CONCAT(users.nombre, ' ', users.apellido) as vendedor"),
+                'comprobantes.serie as serie_comprobante',
+                'comprobantes.numero_comprobante as numero_comprobante',
+                DB::raw("CONCAT(usuarios.nombre, ' ', usuarios.apellido) as vendedor"),
                 'ventas.created_at as fecha',
             )
             ->orderBy('ventas.created_at')
