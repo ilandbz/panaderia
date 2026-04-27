@@ -38,11 +38,17 @@
               <label class="form-label small fw-bold text-muted">Fecha de Compra</label>
               <input v-model="form.fecha_compra" type="date" class="form-control border-0 bg-light rounded-3">
             </div>
-            <div class="col-md-8 d-flex align-items-end">
+            <div class="col-md-8 d-flex align-items-end gap-4">
                <div class="form-check form-switch mb-2 ms-2">
                 <input class="form-check-input custom-switch" type="checkbox" role="switch" id="switchIgv" v-model="form.incluye_igv">
                 <label class="form-check-label fw-bold small text-muted ms-2" for="switchIgv">
                   {{ form.incluye_igv ? 'Calcular IGV (18%)' : 'Exonerado de IGV (0%)' }}
+                </label>
+              </div>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input custom-switch" type="checkbox" role="switch" id="switchCaja" v-model="form.registrar_en_caja">
+                <label class="form-check-label fw-bold small text-muted ms-2" for="switchCaja" :class="{'text-primary': form.registrar_en_caja}">
+                   {{ form.registrar_en_caja ? 'Pasar por caja (Egreso)' : 'No pasar por caja' }}
                 </label>
               </div>
             </div>
@@ -141,6 +147,7 @@ const form = ref({
   numero_comprobante: '',
   fecha_compra: new Date().toISOString().substr(0, 10),
   incluye_igv: false,
+  registrar_en_caja: true,
   items: [
     { producto_id: '', cantidad: 1, precio_compra: 0, subtotal: 0 }
   ]

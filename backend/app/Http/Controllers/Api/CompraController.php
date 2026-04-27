@@ -41,6 +41,7 @@ class CompraController extends Controller
             'items.*.cantidad'    => 'required|numeric|min:0.001',
             'items.*.precio_compra' => 'required|numeric|min:0',
             'items.*.subtotal'    => 'required|numeric|min:0',
+            'registrar_en_caja'   => 'nullable|boolean',
         ]);
 
         try {

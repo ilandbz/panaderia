@@ -22,10 +22,14 @@ class CompraService
             $usuario_id = Auth::id();
             $sucursal_id = $data['sucursal_id'] ?? Auth::user()->sucursal_id;
 
-            // Validar Caja
-            $saldoActual = $this->cajaService->obtenerSaldoActual($usuario_id, $sucursal_id);
-            if ($saldoActual < $data['total']) {
-                throw new \Exception("Saldo de caja insuficiente. Saldo actual: S/ " . number_format($saldoActual, 2) . ". Monto compra: S/ " . number_format($data['total'], 2));
+            $registrarEnCaja = !isset($data['registrar_en_caja']) || $data['registrar_en_caja'];
+
+            if ($registrarEnCaja) {
+                // Validar Caja
+                $saldoActual = $this->cajaService->obtenerSaldoActual($usuario_id, $sucursal_id);
+                if ($saldoActual < $data['total']) {
+                    throw new \Exception("Saldo de caja insuficiente. Saldo actual: S/ " . number_format($saldoActual, 2) . ". Monto compra: S/ " . number_format($data['total'], 2));
+                }
             }
 
             $ultimoId = Compra::withTrashed()->max('id') ?? 0;
@@ -79,7 +83,9 @@ class CompraService
             }
 
             // Registrar Egreso en Caja
-            $this->cajaService->registrarEgresoCompra($compra);
+            if ($registrarEnCaja) {
+                $this->cajaService->registrarEgresoCompra($compra);
+            }
 
             return $compra->load('detalles.producto', 'proveedor');
         });
