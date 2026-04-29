@@ -5,6 +5,12 @@ import { useProduccionStore } from '@/stores/produccion.store';
 import Swal from 'sweetalert2';
 import { Modal } from 'bootstrap';
 
+// Formatear moneda PEN
+const formatCurrency = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'S/ —';
+    return 'S/ ' + Number(val).toFixed(2);
+};
+
 const props = defineProps({
     modelValue: Boolean,
     receta: {
@@ -34,6 +40,49 @@ const form = ref({
 const isEditing = computed(() => !!props.receta);
 const productosElaborados = computed(() => productStore.products.filter(p => p.tipo === 'elaborado'));
 const insumosDisponibles = computed(() => productStore.products.filter(p => p.tipo === 'insumo'));
+
+// Producto elaborado seleccionado actualmente
+const productoSeleccionado = computed(() =>
+    productosElaborados.value.find(p => p.id == form.value.producto_id) || null
+);
+
+// Precio de venta del producto elaborado
+const precioVenta = computed(() => {
+    const p = productoSeleccionado.value;
+    if (!p) return null;
+    return parseFloat(p.precio) || parseFloat(p.precio_venta) || null;
+});
+
+// Costo por cada línea de insumo (precio_compra * cantidad)
+const costosPorInsumo = computed(() =>
+    form.value.insumos.map(item => {
+        const insumo = insumosDisponibles.value.find(i => i.id == item.insumo_id);
+        if (!insumo || !item.cantidad) return null;
+        const costo = parseFloat(insumo.precio_compra || insumo.costo || 0);
+        return costo * parseFloat(item.cantidad);
+    })
+);
+
+// Costo total de la receta (un batch)
+const costoTotalReceta = computed(() => {
+    const costos = costosPorInsumo.value;
+    if (costos.every(c => c === null)) return null;
+    return costos.reduce((sum, c) => sum + (c || 0), 0);
+});
+
+// Utilidad = precio de venta * rendimiento - costo total
+const utilidadEstimada = computed(() => {
+    if (precioVenta.value === null || costoTotalReceta.value === null) return null;
+    const ingresos = precioVenta.value * parseFloat(form.value.rendimiento || 1);
+    return ingresos - costoTotalReceta.value;
+});
+
+// Margen de utilidad en %
+const margenPorcentaje = computed(() => {
+    if (precioVenta.value === null || costoTotalReceta.value === null || costoTotalReceta.value === 0) return null;
+    const ingresos = precioVenta.value * parseFloat(form.value.rendimiento || 1);
+    return ((ingresos - costoTotalReceta.value) / ingresos) * 100;
+});
 
 watch(() => props.modelValue, (val) => {
     if (val) {
@@ -186,9 +235,10 @@ const cerrar = () => {
                                     <table class="table table-sm align-middle">
                                         <thead class="bg-light">
                                             <tr>
-                                                <th width="50%">Insumo</th>
-                                                <th width="25%">Cantidad</th>
-                                                <th width="15%">U.M.</th>
+                                                <th width="40%">Insumo</th>
+                                                <th width="20%">Cantidad</th>
+                                                <th width="12%">U.M.</th>
+                                                <th width="18%" class="text-end text-success"><i class="fas fa-coins me-1"></i>Costo</th>
                                                 <th width="10%"></th>
                                             </tr>
                                         </thead>
@@ -228,6 +278,12 @@ const cerrar = () => {
                                                     </div>
                                                 </td>
                                                 <td class="text-end">
+                                                    <span v-if="costosPorInsumo[index] !== null" class="small fw-bold text-success">
+                                                        {{ formatCurrency(costosPorInsumo[index]) }}
+                                                    </span>
+                                                    <span v-else class="small text-muted">—</span>
+                                                </td>
+                                                <td class="text-end">
                                                     <button type="button" class="btn btn-sm text-danger" @click="removeInsumo(index)" :disabled="form.insumos.length === 1">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
@@ -235,6 +291,56 @@ const cerrar = () => {
                                             </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Análisis Financiero -->
+                        <div class="financiero-panel rounded-4 p-3 mt-4" :class="{
+                            'financiero-positivo': utilidadEstimada !== null && utilidadEstimada > 0,
+                            'financiero-negativo': utilidadEstimada !== null && utilidadEstimada <= 0,
+                            'financiero-neutro': utilidadEstimada === null
+                        }">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-chart-pie me-2"></i>
+                                <span class="small fw-bold">Análisis Financiero por Batch ({{ form.rendimiento || 1 }} und.)</span>
+                            </div>
+                            <div class="row g-2 text-center">
+                                <div class="col-4">
+                                    <div class="financiero-item">
+                                        <div class="extrasmall text-muted mb-1">COSTO TOTAL</div>
+                                        <div class="fw-bold">
+                                            {{ costoTotalReceta !== null ? formatCurrency(costoTotalReceta) : '—' }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="financiero-item">
+                                        <div class="extrasmall text-muted mb-1">PRECIO VENTA TOTAL</div>
+                                        <div class="fw-bold text-primary">
+                                            <span v-if="precioVenta !== null">
+                                                {{ formatCurrency(precioVenta * (form.rendimiento || 1)) }}
+                                            </span>
+                                            <span v-else class="text-muted">Sin precio</span>
+                                        </div>
+                                        <div v-if="precioVenta !== null" class="extrasmall text-muted">
+                                            {{ formatCurrency(precioVenta) }} × {{ form.rendimiento || 1 }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="financiero-item">
+                                        <div class="extrasmall text-muted mb-1">UTILIDAD ESTIMADA</div>
+                                        <div class="fw-bold" :class="{
+                                            'text-success': utilidadEstimada !== null && utilidadEstimada > 0,
+                                            'text-danger': utilidadEstimada !== null && utilidadEstimada <= 0
+                                        }">
+                                            {{ utilidadEstimada !== null ? formatCurrency(utilidadEstimada) : '—' }}
+                                        </div>
+                                        <div v-if="margenPorcentaje !== null" class="extrasmall" :class="margenPorcentaje > 0 ? 'text-success' : 'text-danger'">
+                                            {{ margenPorcentaje.toFixed(1) }}% margen
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -257,4 +363,32 @@ const cerrar = () => {
 .text-brown { color: #451a03; }
 .form-label { color: #57534e; }
 .bg-light { background-color: #f8f9fa !important; }
+
+/* Panel financiero */
+.financiero-panel {
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+}
+.financiero-positivo {
+    border-color: #bbf7d0;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+.financiero-negativo {
+    border-color: #fecaca;
+    background: linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%);
+}
+.financiero-neutro {
+    border-color: #e2e8f0;
+    background: #f8fafc;
+}
+.financiero-item {
+    padding: 0.5rem;
+    background: rgba(255,255,255,0.7);
+    border-radius: 0.5rem;
+}
+.extrasmall {
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
 </style>
