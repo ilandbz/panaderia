@@ -2,18 +2,9 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithTitle;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Font;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class VentasExport implements FromCollection, WithHeadings, WithStyles, ShouldAutoSize, WithTitle
+class VentasExport implements WithMultipleSheets
 {
     protected array $data;
     protected string $desde;
@@ -26,42 +17,11 @@ class VentasExport implements FromCollection, WithHeadings, WithStyles, ShouldAu
         $this->hasta = $hasta;
     }
 
-    public function collection(): Collection
-    {
-        return collect($this->data)->map(fn($row) => array_values($row));
-    }
-
-    public function headings(): array
+    public function sheets(): array
     {
         return [
-            'N° Venta',
-            'Cliente',
-            'Forma de Pago',
-            'Subtotal (S/)',
-            'IGV (S/)',
-            'Total (S/)',
-            'Estado',
-            'Comprobante',
-            'Serie',
-            'N° Comprobante',
-            'Vendedor',
-            'Fecha',
+            new VentasResumenSheet($this->data['ventas'], $this->desde, $this->hasta),
+            new VentasDetalleSheet($this->data['detalles']),
         ];
-    }
-
-    public function styles(Worksheet $sheet): array
-    {
-        return [
-            1 => [
-                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'C8971A']],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ],
-        ];
-    }
-
-    public function title(): string
-    {
-        return "Ventas {$this->desde} a {$this->hasta}";
     }
 }

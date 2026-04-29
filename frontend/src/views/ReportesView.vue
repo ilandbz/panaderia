@@ -185,6 +185,7 @@
                     <th class="text-end">Ventas</th>
                     <th class="text-end">Ingresos</th>
                     <th class="text-end">Ticket Promedio</th>
+                    <th class="text-center">Detalle</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -195,9 +196,18 @@
                     </td>
                     <td class="text-end fw-bold text-success">S/ {{ fmt(row.total_ventas) }}</td>
                     <td class="text-end text-muted">S/ {{ fmt(row.ticket_promedio) }}</td>
+                    <td class="text-center">
+                      <button
+                        class="btn btn-sm btn-outline-warning py-0 px-2"
+                        title="Ver productos vendidos en este período"
+                        @click="verDetalle(row.periodo)"
+                      >
+                        <i class="fas fa-eye me-1"></i>Ver
+                      </button>
+                    </td>
                   </tr>
                   <tr v-if="ventasData.length === 0">
-                    <td colspan="4" class="text-center text-muted py-4">
+                    <td colspan="5" class="text-center text-muted py-4">
                       <i class="fas fa-chart-line fa-2x mb-2 d-block opacity-25"></i>
                       Sin datos en el período seleccionado
                     </td>
@@ -649,6 +659,137 @@
       </div>
     </template>
   </div>
+
+  <!-- ===== MODAL: DETALLE VENTAS ===== -->
+  <div
+    class="modal-backdrop-custom"
+    v-if="modalDetalle.show"
+    @click.self="cerrarModalDetalle"
+  >
+    <div class="modal-detalle-container">
+      <!-- Header -->
+      <div class="modal-detalle-header">
+        <div>
+          <h5 class="mb-0 fw-bold">
+            <i class="fas fa-shopping-bag me-2 text-warning"></i>
+            Productos Vendidos
+          </h5>
+          <small class="text-muted">Período: <strong>{{ modalDetalle.periodo }}</strong></small>
+        </div>
+        <button class="btn-close-detalle" @click="cerrarModalDetalle">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Spinner -->
+      <div v-if="modalDetalle.cargando" class="text-center py-5">
+        <div class="spinner-border" style="color: var(--jara-primary);"></div>
+        <p class="mt-2 text-muted small">Cargando detalle...</p>
+      </div>
+
+      <!-- Contenido -->
+      <div v-else class="modal-detalle-body">
+        <!-- KPIs rápidos -->
+        <div class="d-flex gap-3 flex-wrap mb-3">
+          <div class="det-kpi">
+            <i class="fas fa-receipt text-warning me-1"></i>
+            <span class="fw-semibold">{{ modalDetalle.ventas.length }}</span>
+            <small class="text-muted"> ventas</small>
+          </div>
+          <div class="det-kpi">
+            <i class="fas fa-boxes text-info me-1"></i>
+            <span class="fw-semibold">{{ totalProductosModal }}</span>
+            <small class="text-muted"> líneas de producto</small>
+          </div>
+          <div class="det-kpi ms-auto">
+            <i class="fas fa-coins text-success me-1"></i>
+            <small class="text-muted">Total: </small>
+            <span class="fw-bold text-success">S/ {{ fmt(totalModalVentas) }}</span>
+          </div>
+        </div>
+
+        <!-- Tabla ventas con acordeón de productos -->
+        <div class="table-responsive modal-table-wrap">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="sticky-top">
+              <tr>
+                <th style="width:36px"></th>
+                <th>N° Venta</th>
+                <th>Cliente</th>
+                <th>Vendedor</th>
+                <th>Forma Pago</th>
+                <th class="text-end">Total</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="venta in modalDetalle.ventas" :key="venta.id">
+                <!-- Fila principal -->
+                <tr
+                  class="venta-row"
+                  :class="{ 'row-expanded': expandedVenta === venta.id }"
+                  @click="toggleVenta(venta.id)"
+                >
+                  <td class="text-center">
+                    <i
+                      class="fas fa-chevron-right det-chevron"
+                      :class="{ 'rotated': expandedVenta === venta.id }"
+                    ></i>
+                  </td>
+                  <td><code class="text-warning fw-bold">#{{ venta.numero_venta }}</code></td>
+                  <td>{{ venta.cliente }}</td>
+                  <td><small class="text-muted">{{ venta.vendedor }}</small></td>
+                  <td>
+                    <span class="badge bg-info-subtle text-info">{{ venta.forma_pago }}</span>
+                  </td>
+                  <td class="text-end fw-bold text-success">S/ {{ fmt(venta.total) }}</td>
+                  <td><small class="text-muted">{{ formatDate(venta.fecha) }}</small></td>
+                </tr>
+                <!-- Fila detalle (expandida) -->
+                <tr v-if="expandedVenta === venta.id" class="detalle-row">
+                  <td colspan="7" class="p-0">
+                    <div class="detalle-productos-wrap">
+                      <table class="table table-sm mb-0 detalle-productos-table">
+                        <thead>
+                          <tr>
+                            <th>Producto</th>
+                            <th class="text-center">Cant.</th>
+                            <th class="text-end">P. Unit.</th>
+                            <th class="text-end">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(item, idx) in venta.detalle" :key="idx">
+                            <td>
+                              <i class="fas fa-circle-dot text-warning me-1" style="font-size:.65rem"></i>
+                              {{ item.producto }}
+                            </td>
+                            <td class="text-center">
+                              <span class="badge bg-warning-subtle text-warning">{{ item.cantidad }}</span>
+                            </td>
+                            <td class="text-end text-muted">S/ {{ fmt(item.precio_unitario) }}</td>
+                            <td class="text-end fw-semibold">S/ {{ fmt(item.subtotal) }}</td>
+                          </tr>
+                          <tr v-if="!venta.detalle?.length">
+                            <td colspan="4" class="text-muted text-center py-2">
+                              <small>Sin detalle disponible</small>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr v-if="!modalDetalle.ventas.length">
+                <td colspan="7" class="text-center text-muted py-4">Sin ventas en este período</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -688,6 +829,15 @@ const inventarioData     = ref([]);
 const inventarioFiltrado = ref([]);
 const invBuscar          = ref('');
 const invCategoria       = ref('');
+
+// ===== Modal detalle ventas =====
+const modalDetalle = ref({
+  show:     false,
+  cargando: false,
+  periodo:  '',
+  ventas:   [],
+});
+const expandedVenta = ref(null);
 
 // Referencias a canvas
 const canvasVentas    = ref(null);
@@ -731,6 +881,14 @@ const invStockBajoCount = computed(() =>
 
 const valorInventario = computed(() =>
   inventarioFiltrado.value.reduce((acc, p) => acc + (p.stock * p.costo), 0)
+);
+
+const totalProductosModal = computed(() =>
+  modalDetalle.value.ventas.reduce((acc, v) => acc + (v.detalle?.length ?? 0), 0)
+);
+
+const totalModalVentas = computed(() =>
+  modalDetalle.value.ventas.reduce((acc, v) => acc + (v.total ?? 0), 0)
 );
 
 // ===================== HELPERS =====================
@@ -868,6 +1026,54 @@ function filtrarInventario() {
     return matchBuscar && matchCat;
   });
 }
+
+// ===================== MODAL DETALLE VENTAS =====================
+async function verDetalle(periodo) {
+  modalDetalle.value = { show: true, cargando: true, periodo, ventas: [] };
+  expandedVenta.value = null;
+  // Determine desde/hasta for this period based on filtros
+  try {
+    const res = await reporteService.getVentasDetalle(filtros.value.desde, filtros.value.hasta);
+    const todasLasVentas = res.data ?? [];
+    // Filter to only ventas whose fecha matches the selected period
+    modalDetalle.value.ventas = todasLasVentas.filter(v => {
+      if (!v.fecha) return false;
+      const d = new Date(v.fecha);
+      const agrupar = filtros.value.agrupar;
+      if (agrupar === 'mes') {
+        const mesKey = d.toISOString().slice(0, 7); // YYYY-MM
+        return mesKey === periodo;
+      } else if (agrupar === 'semana') {
+        // backend uses %Y-%u format — match by year-week
+        const year = d.getFullYear();
+        const startOfYear = new Date(year, 0, 1);
+        const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+        const weekKey = `${year}-${String(weekNum).padStart(2, '0')}`;
+        return weekKey === periodo;
+      } else {
+        // dia: YYYY-MM-DD
+        return d.toISOString().slice(0, 10) === periodo;
+      }
+    });
+  } catch (e) {
+    console.error('Error cargando detalle:', e);
+    modalDetalle.value.ventas = [];
+  } finally {
+    modalDetalle.value.cargando = false;
+  }
+}
+
+function cerrarModalDetalle() {
+  document.activeElement?.blur();
+  modalDetalle.value.show = false;
+  modalDetalle.value.ventas = [];
+  expandedVenta.value = null;
+}
+
+function toggleVenta(id) {
+  expandedVenta.value = expandedVenta.value === id ? null : id;
+}
+
 
 async function exportarInventario() {
   exportando.value = true;
@@ -1315,4 +1521,118 @@ onUnmounted(() => {
 }
 .inv-search { width: 200px; }
 .inv-cat    { width: 180px; }
+
+/* ---- Modal Detalle Ventas ---- */
+.modal-backdrop-custom {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1055;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+  animation: fadeInBackdrop 0.2s ease;
+}
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal-detalle-container {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  animation: slideUpModal 0.25s ease;
+  overflow: hidden;
+}
+@keyframes slideUpModal {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-detalle-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f0e8d5;
+  background: linear-gradient(135deg, #fffdf7, #fff8ec);
+  flex-shrink: 0;
+}
+.btn-close-detalle {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #7a7a7a;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+.btn-close-detalle:hover {
+  background: rgba(192, 57, 43, 0.1);
+  color: #C0392B;
+}
+.modal-detalle-body {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-table-wrap {
+  max-height: 480px;
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid #f0e8d5;
+}
+.det-kpi {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.9rem;
+  background: #fffdf7;
+  border: 1px solid #f0e8d5;
+  border-radius: 20px;
+  font-size: 0.83rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+/* Fila venta principal */
+.venta-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.venta-row:hover { background: rgba(200, 151, 26, 0.05); }
+.venta-row.row-expanded { background: rgba(200, 151, 26, 0.09); }
+.det-chevron {
+  color: #C8971A;
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+.det-chevron.rotated { transform: rotate(90deg); }
+/* Fila detalle expandida */
+.detalle-row { background: #fffdf7; }
+.detalle-productos-wrap {
+  border-top: 2px solid rgba(200, 151, 26, 0.2);
+  padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+}
+.detalle-productos-table thead tr th {
+  background: rgba(200, 151, 26, 0.08);
+  color: #7a6010;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(200,151,26,0.15);
+}
+.detalle-productos-table tbody td {
+  font-size: 0.85rem;
+  color: #3a3a3a;
+  border-color: rgba(200,151,26,0.08);
+  vertical-align: middle;
+}
 </style>

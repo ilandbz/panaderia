@@ -47,6 +47,10 @@ const reporteService = {
         return api.get(`${BASE}/inventario-actual`, { params: { buscar, categoria } });
     },
 
+    getVentasDetalle(desde, hasta) {
+        return api.get(`${BASE}/ventas-detalle`, { params: { desde, hasta } });
+    },
+
     // ---- Exportar Excel (blob directo, bypassing response.data interceptor) ----
     exportVentas(desde, hasta) {
         return _downloadRequest(`${BASE}/export/ventas`, { desde, hasta });

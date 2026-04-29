@@ -343,17 +343,77 @@ class ReporteService
     }
 
     // =========================================================
+    // REPORTE: Ventas con detalle de productos
+    // =========================================================
+    public function ventasConDetalle(string $desde, string $hasta): array
+    {
+        $ventas = DB::table('ventas')
+            ->leftJoin('usuarios', 'usuarios.id', '=', 'ventas.usuario_id')
+            ->leftJoin('clientes', 'clientes.id', '=', 'ventas.cliente_id')
+            ->whereBetween('ventas.created_at', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
+            ->where('ventas.estado', 'completada')
+            ->whereNull('ventas.deleted_at')
+            ->select(
+                'ventas.id',
+                'ventas.numero_venta',
+                'ventas.forma_pago',
+                'ventas.total',
+                'ventas.estado',
+                'ventas.tipo_comprobante',
+                DB::raw("COALESCE(clientes.nombre_completo, 'Público General') as cliente"),
+                DB::raw("CONCAT(usuarios.nombre, ' ', usuarios.apellido) as vendedor"),
+                'ventas.created_at as fecha',
+            )
+            ->orderBy('ventas.created_at', 'desc')
+            ->get();
+
+        $ventaIds = $ventas->pluck('id')->toArray();
+
+        $detalles = DB::table('detalle_ventas')
+            ->join('productos', 'productos.id', '=', 'detalle_ventas.producto_id')
+            ->whereIn('detalle_ventas.venta_id', $ventaIds)
+            ->select(
+                'detalle_ventas.venta_id',
+                'productos.nombre as producto',
+                'detalle_ventas.cantidad',
+                'detalle_ventas.precio_unitario',
+                'detalle_ventas.subtotal',
+            )
+            ->get()
+            ->groupBy('venta_id');
+
+        return $ventas->map(fn($v) => [
+            'id'               => $v->id,
+            'numero_venta'     => $v->numero_venta,
+            'cliente'          => $v->cliente,
+            'vendedor'         => $v->vendedor,
+            'forma_pago'       => $v->forma_pago,
+            'total'            => round((float) $v->total, 2),
+            'estado'           => $v->estado,
+            'tipo_comprobante' => $v->tipo_comprobante,
+            'fecha'            => $v->fecha,
+            'detalle'          => collect($detalles->get($v->id, []))->map(fn($d) => [
+                'producto'        => $d->producto,
+                'cantidad'        => (float) $d->cantidad,
+                'precio_unitario' => round((float) $d->precio_unitario, 2),
+                'subtotal'        => round((float) $d->subtotal, 2),
+            ])->toArray(),
+        ])->toArray();
+    }
+
+    // =========================================================
     // EXPORT DATA: Ventas para Excel
     // =========================================================
     public function exportarVentas(string $desde, string $hasta): array
     {
-        return DB::table('ventas')
+        $ventas = DB::table('ventas')
             ->leftJoin('usuarios', 'usuarios.id', '=', 'ventas.usuario_id')
             ->leftJoin('clientes', 'clientes.id', '=', 'ventas.cliente_id')
             ->leftJoin('comprobantes', 'comprobantes.venta_id', '=', 'ventas.id')
             ->whereBetween('ventas.created_at', [$desde . ' 00:00:00', $hasta . ' 23:59:59'])
             ->whereNull('ventas.deleted_at')
             ->select(
+                'ventas.id',
                 'ventas.numero_venta',
                 DB::raw("COALESCE(clientes.nombre_completo, 'Público General') as cliente"),
                 'ventas.forma_pago',
@@ -368,22 +428,55 @@ class ReporteService
                 'ventas.created_at as fecha',
             )
             ->orderBy('ventas.created_at')
+            ->get();
+
+        $ventaIds = $ventas->pluck('id')->toArray();
+        $detalles = DB::table('detalle_ventas')
+            ->join('productos', 'productos.id', '=', 'detalle_ventas.producto_id')
+            ->whereIn('detalle_ventas.venta_id', $ventaIds)
+            ->select(
+                'detalle_ventas.venta_id',
+                'productos.nombre as producto',
+                'detalle_ventas.cantidad',
+                'detalle_ventas.precio_unitario',
+                'detalle_ventas.subtotal',
+            )
             ->get()
-            ->map(fn($r) => [
-                'N° Venta'       => $r->numero_venta,
-                'Cliente'        => $r->cliente,
-                'Forma de Pago'  => $r->forma_pago,
-                'Subtotal'       => (float) $r->subtotal,
-                'IGV'            => (float) $r->igv,
-                'Total'          => (float) $r->total,
-                'Estado'         => $r->estado,
-                'Comprobante'    => $r->tipo_comprobante,
-                'Serie'          => $r->serie_comprobante,
-                'N° Comprobante' => $r->numero_comprobante,
-                'Vendedor'       => $r->vendedor,
-                'Fecha'          => $r->fecha,
-            ])
-            ->toArray();
+            ->groupBy('venta_id');
+
+        $ventasArray = $ventas->map(fn($r) => [
+            'N° Venta'       => $r->numero_venta,
+            'Cliente'        => $r->cliente,
+            'Forma de Pago'  => $r->forma_pago,
+            'Subtotal'       => (float) $r->subtotal,
+            'IGV'            => (float) $r->igv,
+            'Total'          => (float) $r->total,
+            'Estado'         => $r->estado,
+            'Comprobante'    => $r->tipo_comprobante,
+            'Serie'          => $r->serie_comprobante,
+            'N° Comprobante' => $r->numero_comprobante,
+            'Vendedor'       => $r->vendedor,
+            'Fecha'          => $r->fecha,
+        ])->toArray();
+
+        $detallesArray = [];
+        foreach ($ventas as $v) {
+            foreach (($detalles->get($v->id) ?? []) as $d) {
+                $detallesArray[] = [
+                    'N° Venta'        => $v->numero_venta,
+                    'Fecha'           => $v->fecha,
+                    'Producto'        => $d->producto,
+                    'Cantidad'        => (float) $d->cantidad,
+                    'Precio Unitario' => round((float) $d->precio_unitario, 2),
+                    'Subtotal'        => round((float) $d->subtotal, 2),
+                ];
+            }
+        }
+
+        return [
+            'ventas'   => $ventasArray,
+            'detalles' => $detallesArray,
+        ];
     }
 
     // =========================================================

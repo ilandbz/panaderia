@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [ReporteController::class, 'dashboard']);
     Route::prefix('reportes')->group(function () {
         Route::get('/ventas',           [ReporteController::class, 'ventas']);
+        Route::get('/ventas-detalle',   [ReporteController::class, 'ventasDetalle']);
         Route::get('/productos-top',    [ReporteController::class, 'productosTop']);
         Route::get('/utilidad',         [ReporteController::class, 'utilidad']);
         Route::get('/ventas-usuario',   [ReporteController::class, 'ventasPorUsuario']);

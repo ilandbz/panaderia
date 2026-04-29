@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\ReporteService;
 use App\Exports\VentasExport;
+use App\Exports\VentasResumenSheet;
+use App\Exports\VentasDetalleSheet;
 use App\Exports\ProductosVendidosExport;
 use App\Exports\StockBajoExport;
 use App\Exports\InventarioActualExport;
@@ -187,6 +189,22 @@ class ReporteController extends Controller
             $request->get('categoria'),
             $request->get('buscar'),
         );
+
+        return $this->successResponse($data);
+    }
+
+    // --------------------------------------------------------
+    // GET /api/reportes/ventas-detalle
+    // ?desde=&hasta= → ventas con lineas de detalle
+    // --------------------------------------------------------
+    public function ventasDetalle(Request $request)
+    {
+        $request->validate([
+            'desde' => 'required|date',
+            'hasta' => 'required|date|after_or_equal:desde',
+        ]);
+
+        $data = $this->service->ventasConDetalle($request->desde, $request->hasta);
 
         return $this->successResponse($data);
     }
