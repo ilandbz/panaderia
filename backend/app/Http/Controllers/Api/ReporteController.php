@@ -7,6 +7,7 @@ use App\Services\ReporteService;
 use App\Exports\VentasExport;
 use App\Exports\ProductosVendidosExport;
 use App\Exports\StockBajoExport;
+use App\Exports\InventarioActualExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 
@@ -177,6 +178,20 @@ class ReporteController extends Controller
     }
 
     // --------------------------------------------------------
+    // GET /api/reportes/inventario-actual
+    // ?buscar=&categoria=
+    // --------------------------------------------------------
+    public function inventarioActual(Request $request)
+    {
+        $data = $this->service->inventarioActual(
+            $request->get('categoria'),
+            $request->get('buscar'),
+        );
+
+        return $this->successResponse($data);
+    }
+
+    // --------------------------------------------------------
     // GET /api/reportes/export/ventas
     // ?desde=&hasta= → descarga .xlsx
     // --------------------------------------------------------
@@ -223,5 +238,20 @@ class ReporteController extends Controller
         $data = $this->service->exportarStockBajo();
 
         return Excel::download(new StockBajoExport($data), 'stock_bajo.xlsx');
+    }
+
+    // --------------------------------------------------------
+    // GET /api/reportes/export/inventario-actual
+    // → descarga .xlsx
+    // --------------------------------------------------------
+    public function exportInventarioActual(Request $request)
+    {
+        $data     = $this->service->exportarInventarioActual(
+            $request->get('categoria'),
+            $request->get('buscar'),
+        );
+        $filename = 'inventario_actual_' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(new InventarioActualExport($data), $filename);
     }
 }

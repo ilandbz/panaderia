@@ -43,6 +43,10 @@ const reporteService = {
         return api.get(`${BASE}/forma-pago`, { params: { desde, hasta } });
     },
 
+    getInventarioActual(buscar = '', categoria = '') {
+        return api.get(`${BASE}/inventario-actual`, { params: { buscar, categoria } });
+    },
+
     // ---- Exportar Excel (blob directo, bypassing response.data interceptor) ----
     exportVentas(desde, hasta) {
         return _downloadRequest(`${BASE}/export/ventas`, { desde, hasta });
@@ -54,6 +58,10 @@ const reporteService = {
 
     exportStockBajo() {
         return _downloadRequest(`${BASE}/export/stock-bajo`, {});
+    },
+
+    exportInventarioActual(buscar = '', categoria = '') {
+        return _downloadRequest(`${BASE}/export/inventario-actual`, { buscar, categoria });
     },
 };
 

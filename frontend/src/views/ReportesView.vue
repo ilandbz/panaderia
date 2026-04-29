@@ -44,23 +44,26 @@
                 <i class="fas fa-sync-alt me-1" :class="{ 'fa-spin': cargando }"></i>
                 Actualizar
               </button>
-              <div class="dropdown">
-                <button class="btn btn-outline-success btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+              <div class="dropdown" ref="dropdownExportRef">
+                <button
+                  class="btn btn-outline-success btn-sm dropdown-toggle"
+                  @click.stop="toggleDropdown"
+                >
                   <i class="fas fa-file-excel me-1"></i> Exportar Excel
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu" :class="{ show: showDropdown }">
                   <li>
-                    <button class="dropdown-item" @click="exportar('ventas')" :disabled="exportando">
+                    <button class="dropdown-item" @click="exportarDesdeDropdown('ventas')" :disabled="exportando">
                       <i class="fas fa-receipt me-2 text-success"></i> Ventas del período
                     </button>
                   </li>
                   <li>
-                    <button class="dropdown-item" @click="exportar('productos')" :disabled="exportando">
+                    <button class="dropdown-item" @click="exportarDesdeDropdown('productos')" :disabled="exportando">
                       <i class="fas fa-bread-slice me-2 text-warning"></i> Productos más vendidos
                     </button>
                   </li>
                   <li>
-                    <button class="dropdown-item" @click="exportar('stock')" :disabled="exportando">
+                    <button class="dropdown-item" @click="exportarDesdeDropdown('stock')" :disabled="exportando">
                       <i class="fas fa-exclamation-triangle me-2 text-danger"></i> Stock bajo
                     </button>
                   </li>
@@ -409,6 +412,107 @@
 
       <!-- ============ TAB: INVENTARIO ============ -->
       <div v-show="tabActivo === 'inventario'">
+
+        <!-- ===== INVENTARIO ACTUAL ===== -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="mb-0 fw-bold">
+              <i class="fas fa-warehouse me-2 text-warning"></i>
+              Inventario Actual
+              <span class="badge bg-warning-subtle text-warning ms-2">{{ inventarioFiltrado.length }}</span>
+            </h6>
+            <div class="d-flex gap-2 flex-wrap">
+              <input
+                v-model="invBuscar"
+                type="text"
+                class="form-control form-control-sm inv-search"
+                placeholder="Buscar por nombre o código..."
+                @input="filtrarInventario"
+              />
+              <select v-model="invCategoria" class="form-select form-select-sm inv-cat" @change="filtrarInventario">
+                <option value="">Todas las categorías</option>
+                <option v-for="cat in categoriasInventario" :key="cat" :value="cat">{{ cat }}</option>
+              </select>
+              <button class="btn btn-outline-success btn-sm" @click="exportarInventario" :disabled="exportando">
+                <i class="fas fa-file-excel me-1"></i> Excel
+              </button>
+            </div>
+          </div>
+
+          <!-- KPIs de resumen inventario -->
+          <div class="inv-kpi-bar px-3 pt-3 pb-2 d-flex gap-3 flex-wrap">
+            <div class="inv-kpi-chip">
+              <i class="fas fa-boxes text-warning me-1"></i>
+              <span class="fw-semibold">{{ inventarioFiltrado.length }}</span>
+              <small class="text-muted"> productos</small>
+            </div>
+            <div class="inv-kpi-chip">
+              <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+              <span class="fw-semibold text-danger">{{ invAgotados }}</span>
+              <small class="text-muted"> agotados</small>
+            </div>
+            <div class="inv-kpi-chip">
+              <i class="fas fa-arrow-down text-warning me-1"></i>
+              <span class="fw-semibold text-warning">{{ invStockBajoCount }}</span>
+              <small class="text-muted"> stock bajo</small>
+            </div>
+            <div class="inv-kpi-chip ms-auto">
+              <i class="fas fa-coins text-success me-1"></i>
+              <small class="text-muted">Valor inventario: </small>
+              <span class="fw-semibold text-success">S/ {{ fmt(valorInventario) }}</span>
+            </div>
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+              <table class="table table-hover table-sm mb-0">
+                <thead class="sticky-top">
+                  <tr>
+                    <th style="min-width:90px">Código</th>
+                    <th style="min-width:200px">Nombre</th>
+                    <th>Categoría</th>
+                    <th class="text-center">Stock</th>
+                    <th class="text-end">Precio Venta</th>
+                    <th class="text-end">Costo</th>
+                    <th class="text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in inventarioFiltrado" :key="item.id">
+                    <td>
+                      <code class="text-muted small">{{ item.codigo }}</code>
+                    </td>
+                    <td>
+                      <div class="fw-semibold">{{ item.nombre }}</div>
+                      <small class="text-muted">{{ item.unidad }}</small>
+                    </td>
+                    <td>
+                      <span class="badge cat-badge">{{ item.categoria }}</span>
+                    </td>
+                    <td class="text-center fw-bold" :class="stockClass(item)">
+                      {{ item.stock }}
+                    </td>
+                    <td class="text-end">S/ {{ fmt(item.precio_venta) }}</td>
+                    <td class="text-end text-muted">S/ {{ fmt(item.costo) }}</td>
+                    <td class="text-center">
+                      <span class="badge" :class="estadoBadge(item.estado_stock)">
+                        <i :class="estadoIcon(item.estado_stock)" class="me-1"></i>
+                        {{ item.estado_stock }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr v-if="inventarioFiltrado.length === 0">
+                    <td colspan="7" class="text-center text-muted py-5">
+                      <i class="fas fa-box-open fa-2x mb-2 d-block opacity-25"></i>
+                      Sin productos que coincidan
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <div class="row g-4">
           <!-- Stock Bajo -->
           <div class="col-lg-6">
@@ -548,7 +652,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import reporteService, { downloadBlob } from '@/services/reporte.service.js';
 
@@ -558,6 +662,10 @@ Chart.register(...registerables);
 const cargando   = ref(false);
 const exportando = ref(false);
 const tabActivo  = ref('ventas');
+
+// Dropdown controlado por Vue (evita problemas con Bootstrap JS en SPA)
+const showDropdown     = ref(false);
+const dropdownExportRef = ref(null);
 
 const filtros = ref({
   desde:   hoy(-30),
@@ -574,6 +682,12 @@ const stockBajoData = ref([]);
 const porVencerData = ref([]);
 const pagoData      = ref([]);
 const utilidad      = ref({ total_venta: 0, total_costo: 0, utilidad: 0, margen_pct: 0 });
+
+// ===== Inventario Actual =====
+const inventarioData     = ref([]);
+const inventarioFiltrado = ref([]);
+const invBuscar          = ref('');
+const invCategoria       = ref('');
 
 // Referencias a canvas
 const canvasVentas    = ref(null);
@@ -601,6 +715,23 @@ const saldoNeto = computed(() => {
   const r = cajaData.value.resumen ?? {};
   return (r.total_ingresos ?? 0) - (r.total_egresos ?? 0);
 });
+
+const categoriasInventario = computed(() => {
+  const cats = [...new Set(inventarioData.value.map(p => p.categoria))];
+  return cats.sort();
+});
+
+const invAgotados = computed(() =>
+  inventarioFiltrado.value.filter(p => p.estado_stock === 'agotado').length
+);
+
+const invStockBajoCount = computed(() =>
+  inventarioFiltrado.value.filter(p => p.estado_stock === 'bajo').length
+);
+
+const valorInventario = computed(() =>
+  inventarioFiltrado.value.reduce((acc, p) => acc + (p.stock * p.costo), 0)
+);
 
 // ===================== HELPERS =====================
 function hoy(offset = 0) {
@@ -646,6 +777,7 @@ async function cargarTodo() {
       cargarPorVencer(),
       cargarPago(),
       cargarUtilidad(),
+      cargarInventarioActual(),
     ]);
   } finally {
     cargando.value = false;
@@ -715,6 +847,43 @@ async function cargarUtilidad() {
     const res = await reporteService.getUtilidad(filtros.value.desde, filtros.value.hasta);
     utilidad.value = res.data ?? {};
   } catch { utilidad.value = {}; }
+}
+
+async function cargarInventarioActual() {
+  try {
+    const res = await reporteService.getInventarioActual();
+    inventarioData.value = res.data ?? [];
+    filtrarInventario();
+  } catch { inventarioData.value = []; inventarioFiltrado.value = []; }
+}
+
+function filtrarInventario() {
+  const buscar = invBuscar.value.toLowerCase().trim();
+  const cat    = invCategoria.value.toLowerCase().trim();
+  inventarioFiltrado.value = inventarioData.value.filter(p => {
+    const matchBuscar = !buscar ||
+      p.nombre.toLowerCase().includes(buscar) ||
+      p.codigo.toLowerCase().includes(buscar);
+    const matchCat = !cat || p.categoria.toLowerCase().includes(cat);
+    return matchBuscar && matchCat;
+  });
+}
+
+async function exportarInventario() {
+  exportando.value = true;
+  try {
+    const blob = await reporteService.exportInventarioActual(
+      invBuscar.value,
+      invCategoria.value,
+    );
+    const filename = `inventario_actual_${new Date().toISOString().split('T')[0]}.xlsx`;
+    downloadBlob(blob, filename);
+  } catch (e) {
+    console.error('Error al exportar inventario:', e);
+    alert('Error al generar el archivo Excel.');
+  } finally {
+    exportando.value = false;
+  }
 }
 
 // ===================== GRÁFICOS =====================
@@ -940,8 +1109,58 @@ async function exportar(tipo) {
   }
 }
 
+// ===================== HELPERS INVENTARIO =====================
+function stockClass(item) {
+  if (item.estado_stock === 'agotado') return 'text-danger';
+  if (item.estado_stock === 'bajo')    return 'text-warning';
+  return 'text-success';
+}
+
+function estadoBadge(estado) {
+  return {
+    'agotado': 'bg-danger',
+    'bajo':    'bg-warning text-dark',
+    'normal':  'bg-success',
+  }[estado] ?? 'bg-secondary';
+}
+
+function estadoIcon(estado) {
+  return {
+    'agotado': 'fas fa-times-circle',
+    'bajo':    'fas fa-exclamation-triangle',
+    'normal':  'fas fa-check-circle',
+  }[estado] ?? 'fas fa-circle';
+}
+
+// ===================== DROPDOWN EXPORT =====================
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value;
+}
+
+function cerrarDropdown() {
+  showDropdown.value = false;
+}
+
+async function exportarDesdeDropdown(tipo) {
+  cerrarDropdown();
+  await exportar(tipo);
+}
+
+function onClickFueraDropdown(e) {
+  if (dropdownExportRef.value && !dropdownExportRef.value.contains(e.target)) {
+    showDropdown.value = false;
+  }
+}
+
 // ===================== LIFECYCLE =====================
-onMounted(cargarTodo);
+onMounted(() => {
+  cargarTodo();
+  document.addEventListener('click', onClickFueraDropdown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', onClickFueraDropdown);
+});
 </script>
 
 <style scoped>
@@ -1071,4 +1290,29 @@ onMounted(cargarTodo);
 .sticky-top { position: sticky; top: 0; z-index: 1; }
 .bg-warning-subtle { background-color: rgba(200,151,26,0.12) !important; }
 .bg-info-subtle    { background-color: rgba(41,128,185,0.12) !important; }
+/* ---- Inventario Actual ---- */
+.inv-kpi-bar {
+  border-bottom: 1px solid #f0e8d5;
+  background: #fffdf7;
+}
+.inv-kpi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  background: #fff;
+  border: 1px solid #f0e8d5;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.cat-badge {
+  background: rgba(200, 151, 26, 0.12);
+  color: #9a7010;
+  font-weight: 600;
+  font-size: 0.72rem;
+  border: 1px solid rgba(200, 151, 26, 0.25);
+}
+.inv-search { width: 200px; }
+.inv-cat    { width: 180px; }
 </style>

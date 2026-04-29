@@ -416,4 +416,68 @@ class ReporteService
             ])
             ->toArray();
     }
+
+    // =========================================================
+    // EXPORT DATA: Inventario actual para Excel
+    // =========================================================
+    public function exportarInventarioActual(?string $categoria = null, ?string $buscar = null): array
+    {
+        return $this->inventarioActual($categoria, $buscar);
+    }
+
+    // =========================================================
+    // REPORTE: Inventario actual (todos los productos con stock)
+    // =========================================================
+    public function inventarioActual(?string $categoria = null, ?string $buscar = null): array
+    {
+        $query = DB::table('producto_sucursal')
+            ->join('productos', 'productos.id', '=', 'producto_sucursal.producto_id')
+            ->join('categorias', 'categorias.id', '=', 'productos.categoria_id')
+            ->where('producto_sucursal.sucursal_id', config('app.sucursal_id'))
+            ->whereNull('productos.deleted_at')
+            ->select(
+                'productos.id',
+                'productos.codigo',
+                'productos.nombre',
+                'categorias.nombre as categoria',
+                'producto_sucursal.stock',
+                'producto_sucursal.stock_minimo',
+                'productos.precio_venta',
+                'productos.costo',
+                'productos.unidad_medida',
+                'productos.tipo',
+            );
+
+        if ($categoria) {
+            $query->where('categorias.nombre', 'like', "%{$categoria}%");
+        }
+
+        if ($buscar) {
+            $query->where(function ($q) use ($buscar) {
+                $q->where('productos.nombre', 'like', "%{$buscar}%")
+                  ->orWhere('productos.codigo', 'like', "%{$buscar}%");
+            });
+        }
+
+        return $query
+            ->orderBy('categorias.nombre')
+            ->orderBy('productos.nombre')
+            ->get()
+            ->map(fn($p) => [
+                'id'           => $p->id,
+                'codigo'       => $p->codigo ?? '—',
+                'nombre'       => $p->nombre,
+                'categoria'    => $p->categoria,
+                'stock'        => (float) $p->stock,
+                'stock_minimo' => (float) $p->stock_minimo,
+                'precio_venta' => round((float) $p->precio_venta, 2),
+                'costo'        => round((float) ($p->costo ?? 0), 2),
+                'unidad'       => $p->unidad_medida,
+                'tipo'         => $p->tipo,
+                'estado_stock' => (float) $p->stock <= 0
+                    ? 'agotado'
+                    : ((float) $p->stock <= (float) $p->stock_minimo ? 'bajo' : 'normal'),
+            ])
+            ->toArray();
+    }
 }

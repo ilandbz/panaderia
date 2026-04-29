@@ -54,10 +54,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stock-bajo',       [ReporteController::class, 'stockBajo']);
         Route::get('/por-vencer',       [ReporteController::class, 'porVencer']);
         Route::get('/forma-pago',       [ReporteController::class, 'formaPago']);
+        Route::get('/inventario-actual', [ReporteController::class, 'inventarioActual']);
         // Exportación Excel
-        Route::get('/export/ventas',         [ReporteController::class, 'exportVentas']);
-        Route::get('/export/productos-top',  [ReporteController::class, 'exportProductosTop']);
-        Route::get('/export/stock-bajo',     [ReporteController::class, 'exportStockBajo']);
+        Route::get('/export/ventas',              [ReporteController::class, 'exportVentas']);
+        Route::get('/export/productos-top',        [ReporteController::class, 'exportProductosTop']);
+        Route::get('/export/stock-bajo',           [ReporteController::class, 'exportStockBajo']);
+        Route::get('/export/inventario-actual',    [ReporteController::class, 'exportInventarioActual']);
     });
 
     // Ventas
