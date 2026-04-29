@@ -437,7 +437,14 @@ const nuevaVenta = () => {
                       <i class="fas fa-plus extrasmall"></i>
                     </button>
                   </div>
-                  <span class="ms-2">x S/ {{ item.precio_venta }}</span>
+                  <div class="d-flex align-items-center bg-light rounded-pill px-2 py-1 border shadow-sm" title="Editar precio unitario (Descuento)">
+                    <span class="extrasmall fw-bold text-muted me-1">x S/</span>
+                    <input type="number" 
+                           v-model.number="item.precio_venta" 
+                           class="form-control form-control-sm border-0 p-0 bg-transparent fw-bold text-primary text-center" 
+                           style="width: 55px; font-size: 0.75rem;" 
+                           min="0" step="0.10">
+                  </div>
                 </div>
               </div>
               <div class="d-flex align-items-center text-end ms-2">
