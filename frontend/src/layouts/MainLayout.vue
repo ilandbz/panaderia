@@ -142,6 +142,30 @@ const handleLogout = async () => {
   width: 70px;
 }
 
+.sidebar-nav {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Ocultar scrollbar para un diseño más limpio */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
